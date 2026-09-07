@@ -1,12 +1,63 @@
 <template>
-  <section class="coupon-workspace">
+  <section class="coupon-page">
+    <section v-if="view === 'list'" class="coupon-list">
+      <header class="page-head">
+        <div>
+          <div class="breadcrumb"><span>运营管理</span><i class="el-icon-arrow-right" />App优惠券管理</div>
+          <h1 class="page-title">App优惠券管理</h1>
+          <p class="page-description">先检索已经生成的优惠券任务，再进去批量配置。使用中和已下架分开看，不必先选状态再查询。</p>
+        </div>
+        <el-button type="primary" @click="openCreate">新增优惠券</el-button>
+      </header>
+
+      <div class="status-row">
+        <el-radio-group v-model="listStatus" @change="selectedIds = []">
+          <el-radio-button label="ON">使用中 {{ onCount }}</el-radio-button>
+          <el-radio-button label="OFF">已下架 {{ offCount }}</el-radio-button>
+          <el-radio-button label="ALL">全部 {{ issued.length }}</el-radio-button>
+        </el-radio-group>
+        <el-input v-model.trim="listKeyword" clearable prefix-icon="el-icon-search" placeholder="搜索优惠券名称或任务 ID" />
+        <span class="result-count">当前 {{ visibleIssued.length }} 条</span>
+      </div>
+
+      <el-table :data="visibleIssued" empty-text=" ">
+        <el-table-column label="优惠券任务" min-width="240">
+          <template slot-scope="s">
+            <strong>{{ s.row.name }}</strong>
+            <small class="task-id">任务 ID {{ s.row.id }}</small>
+          </template>
+        </el-table-column>
+        <el-table-column prop="discount" label="优惠方式" width="160" />
+        <el-table-column prop="scope" label="适用范围" min-width="180" />
+        <el-table-column prop="period" label="有效期" width="200" />
+        <el-table-column label="状态" width="110">
+          <template slot-scope="s">
+            <span class="status" :class="s.row.state === 'ON' ? 'on' : 'off'">{{ s.row.state === 'ON' ? '使用中' : '已下架' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220">
+          <template slot-scope="s">
+            <el-button type="text" @click="openEdit(s.row)">配置</el-button>
+            <el-button type="text" @click="copyIssued(s.row)">复制</el-button>
+            <el-button type="text" @click="toggleIssued(s.row)">{{ s.row.state === 'ON' ? '下架' : '上架' }}</el-button>
+            <el-button type="text" class="danger-text" @click="deleteIssued(s.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <p v-if="!visibleIssued.length" class="empty">{{ listEmptyText }}</p>
+    </section>
+
+    <section v-else class="coupon-workspace">
     <header class="page-head">
       <div>
         <div class="breadcrumb"><span>运营管理</span><i class="el-icon-arrow-right" />App优惠券管理</div>
         <h1 class="page-title">App优惠券管理</h1>
         <p class="page-description">先选班型商品，再按项目和科室批量勾选专业，一次性生成实际生效的「商品 × 专业」优惠券。</p>
       </div>
-      <el-button @click="$router.push('/business-lines')">从全部项目清单选择</el-button>
+      <div class="head-actions">
+        <el-button @click="view = 'list'">返回任务列表</el-button>
+        <el-button @click="$router.push('/business-lines')">从全部项目清单选择</el-button>
+      </div>
     </header>
 
     <el-alert
@@ -233,6 +284,7 @@
         <el-button v-else type="primary" @click="priceDialog.visible = false">我知道了</el-button>
       </template>
     </el-dialog>
+    </section>
   </section>
 </template>
 
@@ -240,6 +292,12 @@
 import { allOperationProducts, getImpact, professionProject, readTransfer, taxonomy, zzzcScope } from '../data/phase1Business'
 
 const eliteName = '2027年中级职称精英班'
+const issuedKey = 'coupon-tasks-demo-v1'
+const seedIssued = () => ([
+  { id: 101, name: '中级职称精英班暑期立减券', discount: '满0减980', scope: '19 个专业 · 1 个班型', period: '2026-07-20 至 07-31', state: 'ON' },
+  { id: 102, name: '内科类阶段优惠券', discount: '8折', scope: '6 个专业 · 2 个班型', period: '2026-08-01 至 08-15', state: 'ON' },
+  { id: 103, name: '冲刺班限时直减券', discount: '无门槛减200', scope: '10 个专业 · 1 个班型', period: '2026-06-01 至 06-10', state: 'OFF' }
+])
 
 export default {
   name: 'CouponConfig',
@@ -248,7 +306,18 @@ export default {
     const products = allOperationProducts.map(item => ({ ...item, scope: item.scope.slice() }))
     const transferredProducts = Array.isArray(transfer.products) ? transfer.products : []
     const defaultProduct = products.find(item => item.name === eliteName)
+    let issued = seedIssued()
+    try {
+      const saved = JSON.parse(localStorage.getItem(issuedKey) || 'null')
+      if (Array.isArray(saved) && saved.length) issued = saved
+    } catch (error) { issued = seedIssued() }
     return {
+      view: transfer.source ? 'config' : 'list',
+      listKeyword: '',
+      listStatus: 'ON',
+      selectedIds: [],
+      editingTaskId: null,
+      issued,
       transfer,
       taxonomy,
       products,
@@ -286,6 +355,22 @@ export default {
     }
   },
   computed: {
+    onCount () { return this.issued.filter(item => item.state === 'ON').length },
+    offCount () { return this.issued.filter(item => item.state === 'OFF').length },
+    visibleIssued () {
+      const query = this.listKeyword.toLowerCase()
+      return this.issued.filter(item => {
+        if (this.listStatus !== 'ALL' && item.state !== this.listStatus) return false
+        if (query && !`${item.name} ${item.id} ${item.discount} ${item.scope}`.toLowerCase().includes(query)) return false
+        return true
+      })
+    },
+    listEmptyText () {
+      if (this.listKeyword) return '没有匹配的优惠券任务，换个名称或 ID 试试。'
+      if (this.listStatus === 'ON') return '当前没有使用中的优惠券。可切换到「已下架」查看停用任务。'
+      if (this.listStatus === 'OFF') return '当前没有已下架的优惠券。使用中的任务在「使用中」里。'
+      return '还没有优惠券任务，可点「新增优惠券」去批量配置。'
+    },
     selectedCourses () { return this.products.filter(item => this.productIds.includes(item.id)) },
     catalogProducts () {
       return this.products
@@ -402,6 +487,38 @@ export default {
     }
   },
   methods: {
+    persistIssued () { localStorage.setItem(issuedKey, JSON.stringify(this.issued)) },
+    openCreate () {
+      this.editingTaskId = null
+      this.view = 'config'
+    },
+    openEdit (row) {
+      this.editingTaskId = row.id
+      this.form.name = row.name
+      this.view = 'config'
+    },
+    copyIssued (row) {
+      const id = Math.max.apply(null, this.issued.map(item => item.id)) + 1
+      this.issued.unshift({ ...row, id, name: `${row.name}（复制）`, state: 'OFF' })
+      this.persistIssued()
+      this.listStatus = 'OFF'
+      this.$message.success('已复制到「已下架」，可继续配置后上架')
+    },
+    toggleIssued (row) {
+      const action = row.state === 'ON' ? '下架' : '上架'
+      this.$confirm(`确认${action}「${row.name}」？这会改变它在 App 中是否可用。`, `确认${action}`, { type: 'warning', confirmButtonText: `确认${action}`, cancelButtonText: '取消' }).then(() => {
+        row.state = row.state === 'ON' ? 'OFF' : 'ON'
+        this.persistIssued()
+        this.$message.success(`已${action}`)
+      }).catch(() => {})
+    },
+    deleteIssued (row) {
+      this.$confirm(`确认删除「${row.name}」？当前演示删除后可从任务列表消失，接入后台后按真实删除规则执行。`, '确认删除', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }).then(() => {
+        this.issued = this.issued.filter(item => item.id !== row.id)
+        this.persistIssued()
+        this.$message.success('已删除')
+      }).catch(() => {})
+    },
     payableAfterCoupon (price) {
       if (price === null || price === undefined || price === '') return null
       const value = Number(price)
@@ -533,7 +650,20 @@ export default {
         })
         this.aiOverride = `刚刚，<b>你</b> 一次性批量配置了「${cats}」的优惠券（${this.discountSummary}，有效期 ${this.form.startAt} 至 ${this.form.endAt}），适用课程：${courses}，共生成 <b>${this.impact.combinationCount}</b> 张，相比逐个专业逐个课程手动勾选，节省大量重复操作。此外，「内科主治」优惠券近 7 天内被修改 3 次，金额来回波动，建议核实是否为误操作。`
         this.submitting = false
-        this.$message.success(`已生成 ${this.impact.combinationCount} 张优惠券配置`)
+        const period = `${this.form.startAt.slice(0, 10)} 至 ${this.form.endAt.slice(5, 10)}`
+        const scope = `${this.professionIds.length} 个专业 · ${this.productIds.length} 个班型`
+        if (this.editingTaskId) {
+          const row = this.issued.find(item => item.id === this.editingTaskId)
+          if (row) Object.assign(row, { name: this.form.name, discount: this.discountSummary, scope, period, state: 'ON' })
+        } else {
+          const id = Math.max.apply(null, [100].concat(this.issued.map(item => item.id))) + 1
+          this.issued.unshift({ id, name: this.form.name, discount: this.discountSummary, scope, period, state: 'ON' })
+          this.editingTaskId = id
+        }
+        this.persistIssued()
+        this.$message.success(`已生成 ${this.impact.combinationCount} 张优惠券配置，可在任务列表检索`)
+        this.listStatus = 'ON'
+        this.view = 'list'
       }, 600)
     }
   }
@@ -541,6 +671,18 @@ export default {
 </script>
 
 <style scoped>
+.coupon-page{max-width:1440px;margin:0 auto}
+.coupon-list .status-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:22px 0 16px}
+.coupon-list .status-row .el-input{width:320px}
+.coupon-list .result-count{margin-left:auto;color:var(--muted);font-size:13px}
+.coupon-list .task-id{display:block;margin-top:4px;color:var(--muted);font-size:12px;font-weight:400}
+.coupon-list .status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap}
+.coupon-list .status:before{width:7px;height:7px;border-radius:50%;background:currentColor;content:""}
+.coupon-list .status.on{background:#eaf6f1;color:#147a62}
+.coupon-list .status.off{background:#e8ebee;color:#69717c}
+.coupon-list .empty{padding:40px 20px;color:var(--muted);text-align:center}
+.danger-text{color:#c9232d}
+.head-actions{display:flex;flex-wrap:wrap;gap:8px}
 .coupon-workspace{max-width:1180px;margin:0 auto}.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.breadcrumb{margin-bottom:10px;color:#8a919e;font-size:12px}.breadcrumb span{color:#5f6876}.breadcrumb i{margin:0 7px}.transfer-alert{margin-top:16px}.intro-banner{margin:16px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff}.intro-banner p{display:grid;grid-template-columns:78px 1fr;gap:10px;margin:0 0 6px;color:var(--muted);line-height:1.7}.intro-banner p:last-child{margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line);color:#166350}.intro-banner strong{color:var(--ink)}.workspace-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:18px;align-items:start}.config-panel,.log-panel{padding:22px 24px;border:1px solid var(--line);border-radius:10px;background:#fff}.panel-title{margin-bottom:18px;font-size:14px;font-weight:700}.field-row{margin-bottom:20px}.field-label{display:block;margin-bottom:8px;font-weight:600}.req{margin-right:3px;color:#c91420}.mode-toggle{display:flex;gap:8px;margin-bottom:10px}.mode-btn{flex:1;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);font-weight:700;cursor:pointer}.mode-btn.active{border-color:var(--brand);background:var(--brand-soft);color:#a90a13}.rule-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--muted)}.rule-line .el-input-number{width:120px}.course-toolbar{display:flex;gap:8px;margin-bottom:8px}.course-toolbar .el-input{flex:1}.add-course{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;padding:12px;border:1px dashed #eba5aa;border-radius:8px;background:#fff8f8}.add-hint{margin:0;color:#a90a13;font-size:12px}.add-actions{display:flex;justify-content:flex-end;gap:8px}.course-list{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#fff}.course-group-header{position:sticky;top:0;padding:6px 12px;border-bottom:1px solid var(--line);background:#fafafa;color:var(--muted);font-size:11px;font-weight:700}.course-row{display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px;border:0;border-bottom:1px solid #f0f0f0;background:#fff;text-align:left;cursor:pointer}.course-row:last-child{border-bottom:0}.course-row:hover{background:#fafafa}.course-row.checked{background:var(--brand-soft)}.box{width:14px;height:14px;flex-shrink:0;border:1px solid #c5cbd3;border-radius:3px;background:#fff}.course-row.checked .box{border-color:var(--brand);background:var(--brand);box-shadow:inset 0 0 0 2px #fff}.course-name{flex:1}.course-tag{flex-shrink:0;padding:1px 7px;border-radius:8px;background:#f0f0f0;color:var(--muted);font-size:10px}.remove{display:none;width:18px;height:18px;border-radius:50%;background:#edeef0;color:var(--muted);font-size:11px;line-height:18px;text-align:center}.course-row:hover .remove{display:inline-block}.remove:hover{background:var(--brand);color:#fff}.course-empty{padding:16px;color:var(--muted);text-align:center}.selected-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.price-alert{margin-top:10px}
 .price-preview{margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;background:#fafafa}
 .price-preview-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--ink);font-size:12px;font-weight:700}
