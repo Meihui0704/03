@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>临床商品清单 · 批量管理</title>
+<style>
+  :root{
+    --jade:#1F8A6E;
+    --jade-dark:#166350;
+    --jade-tint:#E4F2EC;
+    --blue:#4A90E2;
+    --text:#2B2B2B;
+    --muted:#8A8A8A;
+    --line:#E3E3E3;
+    --amber:#B8862E;
+    --amber-tint:#FBF3E2;
+    --brand:#D7000F;
+    --brand-dark:#A3000C;
+    --brand-tint:#FBE7E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:#F5F6F7;color:var(--text);
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
+
+  .brand-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .brand-header img{height:34px;display:block;}
+  .brand-header .sep{width:1px;height:22px;background:var(--line);}
+  .brand-header .page-name{font-size:13px;color:var(--muted);font-weight:600;}
+
+  .intro-banner{
+    background:#fff;border:1px solid var(--line);border-left:4px solid var(--brand);
+    border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:12.5px;line-height:1.75;
+  }
+  .intro-banner .row{display:flex;gap:8px;margin-bottom:4px;}
+  .intro-banner .row:last-child{margin-bottom:0;}
+  .intro-banner .label{flex-shrink:0;font-weight:800;color:var(--text);width:78px;}
+  .intro-banner .val{color:var(--muted);}
+  .intro-banner .task{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);}
+  .intro-banner .task .val{color:var(--jade-dark);font-weight:700;}
+
+  .scope-bar{
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:16px;
+  }
+  .scope-title{font-size:12.5px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .scope-title .req{color:#E0453C;}
+  .scope-options{display:flex;gap:10px;flex-wrap:wrap;}
+  .scope-chip{
+    display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:8px;
+    border:1.5px solid var(--line);background:#FAFAFA;font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .scope-chip.active{background:var(--brand-tint);border-color:var(--brand);color:var(--brand-dark);}
+  .scope-chip input{width:14px;height:14px;accent-color:var(--brand);pointer-events:none;}
+  .scope-hint{font-size:11px;color:var(--muted);margin-top:8px;}
+
+  .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;align-items:start;}
+  @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+
+  .own-card{background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;}
+  .own-header{
+    padding:12px 16px;font-size:13px;font-weight:800;color:var(--text);background:#FAFAFA;
+    border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;justify-content:space-between;
+  }
+  .own-header .own-badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .own-badge.shared{background:var(--jade-tint);color:var(--jade-dark);}
+  .own-badge.exec{background:#E4EEF9;color:#2A5C8A;}
+  .own-badge.assist{background:#F3EBFA;color:#7A3FA0;}
+  .own-body{padding:6px 16px 12px;}
+
+  .cat-block{margin-top:10px;}
+  .cat-block:first-child{margin-top:4px;}
+  .cat-label{font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .cat-select-btn{
+    font-size:10.5px;font-weight:600;color:var(--jade-dark);cursor:pointer;padding:2px 8px;
+    border:1px solid var(--jade);border-radius:10px;background:#fff;
+  }
+  .cat-select-btn:hover{background:var(--jade-tint);}
+
+  .sku-row{
+    display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:6px;font-size:12.5px;
+    transition:background .2s;cursor:pointer;
+  }
+  .sku-row:hover{background:#FAFAFA;}
+  .sku-row.checked{background:var(--jade-tint);}
+  .sku-row input{width:14px;height:14px;accent-color:var(--jade);pointer-events:none;flex-shrink:0;}
+  .sku-name{flex:1;}
+  .sku-price{color:var(--brand-dark);font-weight:700;font-size:12px;white-space:nowrap;}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px 22px;}
+  .field-row{margin-bottom:18px;}
+  .field-label{font-size:13px;color:var(--text);margin-bottom:8px;font-weight:500;}
+  .action-toggle{display:flex;flex-wrap:wrap;gap:8px;}
+  .action-btn{
+    padding:8px 12px;border-radius:8px;border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:700;cursor:pointer;text-align:center;color:var(--muted);transition:.15s;flex:1;min-width:90px;
+  }
+  .action-btn.active{background:var(--jade-tint);border-color:var(--jade);color:var(--jade-dark);}
+  .date-input{border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:13px;color:var(--text);width:100%;}
+
+  .save-btn{margin-top:6px;width:100%;padding:12px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .save-btn:hover{background:var(--brand-dark);}
+  .save-note{font-size:11.5px;color:var(--muted);margin-top:8px;text-align:center;}
+
+  .section-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em;margin:0 0 10px 2px;text-transform:uppercase;}
+  .ai-card{background:linear-gradient(155deg,#16302C 0%, #1F4A40 100%);color:#fff;border-radius:10px;padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden;}
+  .ai-eyebrow{font-size:10px;letter-spacing:.12em;color:#8FD4BC;font-weight:700;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:#8FD4BC;animation:blink 1.6s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .ai-text{font-size:12.5px;line-height:1.7;}
+  .ai-text b{color:#8FD4BC;}
+
+  .log-panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px;}
+  .log-item{position:relative;padding:0 0 14px 18px;border-left:2px solid var(--line);}
+  .log-item:last-child{border-left-color:transparent;padding-bottom:0;}
+  .log-item::before{content:"";position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--jade);border:2px solid #fff;box-shadow:0 0 0 1.3px var(--jade);}
+  .log-time{font-family:"SF Mono","Menlo",monospace;font-size:10px;color:var(--muted);}
+  .log-text{font-size:12px;margin-top:3px;line-height:1.5;}
+  .log-item.new .log-text{color:var(--jade-dark);font-weight:600;}
+
+  .summary-line{font-size:11.5px;color:var(--muted);background:#FAFAFA;border-radius:6px;padding:8px 10px;margin-top:8px;line-height:1.6;}
+  .summary-line b{color:var(--jade-dark);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="brand-header">
+    <img src="data:image/png;base64,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" alt="昭昭医考">
+    <div class="sep"></div>
+    <div class="page-name">运营后台 · 临床商品清单管理</div>
+  </div>
+
+  <div class="intro-banner">
+    <div class="row"><span class="label">当前痛点</span><span class="val">同一专业下商品种类多（笔试/面授/网课/书籍等），执业与助理还有共用和专属之分，逐个操作易漏</span></div>
+    <div class="row"><span class="label">本次改造</span><span class="val">按"商品类型"批量勾选，并按"共用/专属"自动匹配适用专业范围，减少重复判断</span></div>
+    <div class="row"><span class="label">预期收益</span><span class="val">证明批量操作方法论不仅适用于"专业"维度，也能下探到"专业内部商品"维度</span></div>
+    <div class="row task"><span class="label">演示任务</span><span class="val">试试看：勾选"共用商品"下的"网络班次"整类，统一下调价格</span></div>
+  </div>
+
+  <div class="scope-bar">
+    <div class="scope-title"><span class="req">*</span>适用专业范围</div>
+    <div class="scope-options" id="scopeOptions"></div>
+    <div class="scope-hint">提示：「共用商品」会同时作用于勾选的所有专业；「专属商品」仅在对应专业被勾选时才生效。</div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div id="ownList"></div>
+    </div>
+
+    <div>
+      <p class="section-label">批量操作设置</p>
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="field-row">
+          <div class="field-label">操作类型</div>
+          <div class="action-toggle" id="actionToggle">
+            <div class="action-btn active" data-action="down">批量下架</div>
+            <div class="action-btn" data-action="up">批量上架</div>
+            <div class="action-btn" data-action="price">统一调价</div>
+          </div>
+        </div>
+        <div class="field-row" id="priceInputRow" style="display:none;">
+          <div class="field-label">下调比例</div>
+          <input class="date-input" type="number" id="pctInput" value="15">
+        </div>
+        <div class="field-row">
+          <div class="field-label">生效时间</div>
+          <input class="date-input" type="datetime-local" value="2026-07-16T09:00">
+        </div>
+        <button class="save-btn" id="applyBtn">应用批量操作</button>
+        <div class="save-note">已选 <b id="selCount">0</b> 个商品</div>
+        <div class="summary-line" id="summaryLine" style="display:none;"></div>
+      </div>
+
+      <p class="section-label">AI 变更摘要</p>
+      <div class="ai-card">
+        <div class="ai-eyebrow"><span class="dot"></span>AI 自动生成</div>
+        <div class="ai-text" id="aiText">请选择商品和操作类型，这里会实时预览本次批量操作的影响范围。</div>
+      </div>
+
+      <p class="section-label">变更记录</p>
+      <div class="log-panel" id="logCard">
+        <div class="log-item">
+          <div class="log-time">07-14 11:20 · 运营-陈昊</div>
+          <div class="log-text">「共用商品·正版书籍」全部下架，因2025版内容过期</div>
+        </div>
+        <div class="log-item">
+          <div class="log-time">07-12 09:40 · 运营-王倩</div>
+          <div class="log-text">「执业专属·笔试冲刺」批量下调 10%，覆盖 1 个商品</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const professions = ["临床执业医师","临床助理医师"];
+
+// 商品数据：ownerType = shared(共用) / exec(执业专属) / assist(助理专属)
+const catalog = [
+  {
+    owner: "shared", ownerLabel: "A. 临床执业医师／临床助理医师共用商品",
+    categories: {
+      "笔试／冲刺": [
+        {name:"2026昭师金题带刷冲刺班", price:1280},
+        {name:"2026考前速效抢救班（券后价）", price:1480},
+        {name:"2026五天四夜仿真模考视频代课面授班", price:2990},
+        {name:"2026五天四夜仿真模考面授班（券后价）", price:4570},
+        {name:"2026八天七夜冲刺串讲视频代课面授班", price:2990},
+      ],
+      "高端面授": [
+        {name:"2026昭师进阶班（技能免考）", price:8330},
+        {name:"2026昭师尊享B班（技能免考）", price:12470},
+      ],
+      "网络班次": [
+        {name:"2026全程精讲班（技能免考，券后价）", price:2300},
+        {name:"2026昭师助力班（技能免考，券后价）", price:3680},
+        {name:"2027全程精讲班（券后价）", price:2300},
+        {name:"2027早鸟班（券后价）", price:2730},
+        {name:"2027昭师助力班（券后价）", price:3680},
+        {name:"2027昭师带学A班（券后价）", price:5830},
+      ],
+      "小昭医声": [
+        {name:"2027心／肺技能听诊", price:9.9},
+      ],
+      "技能突破": [
+        {name:"2027技能3D仿真模拟训练", price:159},
+      ],
+      "正版书籍": [
+        {name:"2026临床执业及助理医师资格考试笔试重难点精析（上下册）（券后价）", price:224.25},
+        {name:"2026临床执业及助理医师资格考试精选真题考点精析（两册）（券后价）", price:179.25},
+        {name:"2026临床执业及助理医师资格考试实践技能操作核心考点背诵版（券后价）", price:27},
+        {name:"2026临床执业及助理医师资格考试笔试核心考点背诵版（券后价）", price:96},
+        {name:"2026临床执业及助理医师资格考试题眼狂背（券后价）", price:36.75},
+        {name:"25—26年手绘笔记普通版", price:194},
+      ]
+    }
+  },
+  {
+    owner: "exec", ownerLabel: "B. 临床执业医师专属商品",
+    categories: {
+      "笔试／冲刺": [
+        {name:"2026执业笔试压题卷（3600题，券后价）", price:499},
+      ],
+      "小昭医声": [
+        {name:"2026全系统临床执业重难点深度解析", price:99},
+        {name:"2026全系统临床执业笔试核心考点", price:129},
+      ],
+      "正版书籍": [
+        {name:"2026临床执业考点蒸馏手册书课包（非偏远地区）", price:99},
+      ]
+    }
+  },
+  {
+    owner: "assist", ownerLabel: "C. 临床助理医师专属商品",
+    categories: {
+      "笔试／冲刺": [
+        {name:"2026助理笔试压题卷（1800题，券后价）", price:499},
+      ],
+      "小昭医声": [
+        {name:"2026全系统临床助理重难点深度解析", price:99},
+        {name:"2026全系统临床助理笔试核心考点", price:129},
+      ],
+      "正版书籍": [
+        {name:"2026临床助理考点蒸馏手册书课包（非偏远地区）", price:99},
+      ]
+    }
+  }
+];
+
+let scopeSet = new Set(professions); // 默认两个专业都勾选
+let checkedSkus = new Set(); // id: owner::category::skuName
+let currentAction = 'down';
+
+const scopeOptions = document.getElementById('scopeOptions');
+professions.forEach(p=>{
+  const chip = document.createElement('div');
+  chip.className = 'scope-chip active';
+  chip.innerHTML = `<input type="checkbox" checked><span>${p}</span>`;
+  chip.addEventListener('click', ()=>{
+    if(scopeSet.has(p)){ scopeSet.delete(p); chip.classList.remove('active'); chip.querySelector('input').checked = false; }
+    else { scopeSet.add(p); chip.classList.add('active'); chip.querySelector('input').checked = true; }
+    render();
+  });
+  scopeOptions.appendChild(chip);
+});
+
+const ownLabelMap = {shared:{cls:'shared', text:'共用'}, exec:{cls:'exec', text:'执业专属'}, assist:{cls:'assist', text:'助理专属'}};
+
+const ownList = document.getElementById('ownList');
+
+function isOwnerApplicable(owner){
+  if(owner === 'shared') return scopeSet.size > 0;
+  if(owner === 'exec') return scopeSet.has('临床执业医师');
+  if(owner === 'assist') return scopeSet.has('临床助理医师');
+  return true;
+}
+
+function render(){
+  ownList.innerHTML = '';
+  catalog.forEach(block=>{
+    const applicable = isOwnerApplicable(block.owner);
+    const card = document.createElement('div');
+    card.className = 'own-card';
+    card.style.opacity = applicable ? '1' : '.45';
+
+    const header = document.createElement('div');
+    header.className = 'own-header';
+    const meta = ownLabelMap[block.owner];
+    header.innerHTML = `<span>${block.ownerLabel}</span><span class="own-badge ${meta.cls}">${meta.text}${applicable ? '' : ' · 当前范围不适用'}</span>`;
+    card.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'own-body';
+
+    Object.entries(block.categories).forEach(([catName, skus])=>{
+      const catBlock = document.createElement('div');
+      catBlock.className = 'cat-block';
+      const allIds = skus.map(s=>`${block.owner}::${catName}::${s.name}`);
+      const allChecked = allIds.every(id=>checkedSkus.has(id));
+
+      const label = document.createElement('div');
+      label.className = 'cat-label';
+      label.innerHTML = `<span>${catName}（${skus.length}）</span><span class="cat-select-btn">${allChecked ? '取消整类' : '整类勾选'}</span>`;
+      label.querySelector('.cat-select-btn').addEventListener('click', ()=>{
+        allIds.forEach(id=>{ if(allChecked) checkedSkus.delete(id); else checkedSkus.add(id); });
+        render();
+      });
+      catBlock.appendChild(label);
+
+      skus.forEach(sku=>{
+        const id = `${block.owner}::${catName}::${sku.name}`;
+        const row = document.createElement('div');
+        row.className = 'sku-row' + (checkedSkus.has(id) ? ' checked' : '');
+        row.innerHTML = `<input type="checkbox" ${checkedSkus.has(id) ? 'checked' : ''}><span class="sku-name">${sku.name}</span><span class="sku-price">¥${sku.price}</span>`;
+        row.addEventListener('click', ()=>{
+          if(checkedSkus.has(id)) checkedSkus.delete(id); else checkedSkus.add(id);
+          render();
+        });
+        catBlock.appendChild(row);
+      });
+
+      body.appendChild(catBlock);
+    });
+
+    card.appendChild(body);
+    ownList.appendChild(card);
+  });
+
+  updateSummary();
+}
+
+function updateSummary(){
+  const n = checkedSkus.size;
+  document.getElementById('selCount').textContent = n;
+  const summaryLine = document.getElementById('summaryLine');
+  const aiText = document.getElementById('aiText');
+  if(n === 0){
+    summaryLine.style.display = 'none';
+    aiText.innerHTML = `请选择商品和操作类型，这里会实时预览本次批量操作的影响范围。`;
+    return;
+  }
+  // 统计涉及的适用专业范围（区分共用/专属）
+  let affectedProfessions = new Set();
+  checkedSkus.forEach(id=>{
+    const [owner] = id.split('::');
+    if(owner === 'shared') scopeSet.forEach(p=>affectedProfessions.add(p));
+    if(owner === 'exec' && scopeSet.has('临床执业医师')) affectedProfessions.add('临床执业医师');
+    if(owner === 'assist' && scopeSet.has('临床助理医师')) affectedProfessions.add('临床助理医师');
+  });
+  summaryLine.style.display = 'block';
+  summaryLine.innerHTML = `本次操作将影响 <b>${affectedProfessions.size}</b> 个专业（${[...affectedProfessions].join('、') || '无'}）`;
+
+  const actionText = currentAction === 'down' ? '批量下架' : currentAction === 'up' ? '批量上架' : `统一下调 ${document.getElementById('pctInput').value}%`;
+  aiText.innerHTML = `已选择 <b>${n}</b> 个商品，将对 <b>${[...affectedProfessions].join('、') || '（未选专业范围）'}</b> 执行「${actionText}」。`;
+}
+
+document.querySelectorAll('.action-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.action-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentAction = btn.dataset.action;
+    document.getElementById('priceInputRow').style.display = currentAction === 'price' ? 'block' : 'none';
+    updateSummary();
+  });
+});
+document.getElementById('pctInput').addEventListener('input', updateSummary);
+
+document.getElementById('applyBtn').addEventListener('click', ()=>{
+  const n = checkedSkus.size;
+  if(n === 0){ alert('请先勾选至少一个商品'); return; }
+  const actionText = currentAction === 'down' ? '批量下架' : currentAction === 'up' ? '批量上架' : `统一下调${document.getElementById('pctInput').value}%`;
+
+  const confirmed = window.confirm(`确认执行「${actionText}」？\n\n覆盖商品：${n} 个\n适用专业：${[...scopeSet].join('、') || '无'}\n\n请确认无误。`);
+  if(!confirmed) return;
+
+  const logCard = document.getElementById('logCard');
+  const item = document.createElement('div');
+  item.className = 'log-item new';
+  const t = `07-16 09:35`;
+  item.innerHTML = `
+    <div class="log-time">${t} · 运营-我</div>
+    <div class="log-text">对 ${n} 个商品执行「${actionText}」，适用专业：${[...scopeSet].join('、') || '无'}</div>
+  `;
+  logCard.insertBefore(item, logCard.firstChild);
+});
+
+render();
+</script>
+<script src="总版外壳.js"></script></body>
+</html>
