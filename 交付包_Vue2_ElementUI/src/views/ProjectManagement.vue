@@ -40,7 +40,7 @@
       <section class="project-map" aria-label="项目地图">
         <header>
           <strong>项目地图</strong>
-          <span>{{ professionProject ? `当前在「${professionProject}」` : '请先选一个项目，避免口腔、临床、中西医混在一张表里' }}</span>
+          <span>{{ professionProject ? `当前在「${professionProject}」` : `与项目总览上架项目一致，共 ${projectMap.length} 个入口` }}</span>
         </header>
         <div class="map-grid">
           <button
@@ -191,17 +191,15 @@ export default {
     },
     professionProjects () { return Array.from(new Set(this.professions.map(item => item.project).filter(item => item && item !== '—'))).sort((a, b) => a.localeCompare(b, 'zh-CN')) },
     projectMap () {
-      const names = Array.from(new Set(this.activeProjects.map(item => item.name).concat(this.professionProjects)))
-      return names.filter(name => name && name !== '—' && name !== '公共预防').map(name => {
-        const rows = this.professions.filter(item => item.project === name && !(item.life || '').includes('为空'))
-        const project = this.activeProjects.find(item => item.name === name)
+      return this.activeProjects.map(project => {
+        const rows = this.professions.filter(item => item.project === project.name && !(item.life || '').includes('为空'))
         return {
-          name,
-          sort: project ? project.sort : 99,
+          name: project.name,
+          sort: project.sort,
           on: rows.filter(item => item.status === 'on').length,
           off: rows.filter(item => item.status === 'off').length
         }
-      }).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'zh-CN'))
+      })
     },
     projectProfessionCounts () {
       const rows = this.professions.filter(item => item.project === this.professionProject && !(item.life || '').includes('为空'))
@@ -214,6 +212,16 @@ export default {
     childOnCount () { return this.childRows.filter(item => item.status === 'on').length }
   },
   created () { this.loadState() },
+  watch: {
+    activeProjects: {
+      immediate: true,
+      handler () {
+        if (this.professionProject && !this.activeProjects.some(item => item.name === this.professionProject)) {
+          this.professionProject = ''
+        }
+      }
+    }
+  },
   methods: {
     noop () {},
     loadState () { try { const saved = JSON.parse(localStorage.getItem('project-management-demo-v1')); this.projects = saved.projects || copy(backendProjects); this.professions = saved.professions || copy(backendProfessions); this.archived = saved.archived || []; this.children = saved.children || copy(defaultChildren) } catch (error) { this.projects = copy(backendProjects); this.professions = copy(backendProfessions); this.archived = []; this.children = copy(defaultChildren) } Object.keys(defaultChildren).forEach(id => { if (!this.children[id] || !this.children[id].length) this.$set(this.children, id, copy(defaultChildren[id])) }) },
