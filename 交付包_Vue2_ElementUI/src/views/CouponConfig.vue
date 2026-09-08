@@ -241,7 +241,7 @@
           <p v-if="dateInvalid" class="date-warning">截止时间不能早于生效时间</p>
         </div>
 
-        <el-button type="primary" class="save-btn" :loading="submitting" :disabled="unsafePricedCourses.length > 0" @click="submit">保存配置</el-button>
+        <el-button type="primary" class="save-btn" :loading="submitting" :disabled="unsafePricedCourses.length > 0 || ruleInvalid" @click="submit">保存配置</el-button>
         <p class="save-note">已选 <b>{{ professionIds.length }}</b> 个专业，实际将生成 <b>{{ impact.combinationCount }}</b> 张优惠券。测算成交价仅供参考。</p>
       </div>
 
@@ -401,6 +401,21 @@ export default {
     dateInvalid () {
       return this.form.startAt && this.form.endAt && new Date(this.form.endAt).getTime() <= new Date(this.form.startAt).getTime()
     },
+    ruleInvalid () {
+      const amount = Number(this.form.amount)
+      const threshold = Number(this.form.threshold)
+      if (this.form.type === 'FULL') return !(threshold > 0) || !(amount > 0) || amount >= threshold
+      if (this.form.type === 'DIRECT') return !(amount > 0)
+      return false
+    },
+    ruleWarning () {
+      if (!this.ruleInvalid) return ''
+      if (this.form.type === 'FULL' && !(Number(this.form.threshold) > 0)) {
+        return `满 ${this.form.threshold} 减 ${this.form.amount} 等于无门槛立减，满减规则本身不成立，不必再核售价。请把门槛改为大于减免金额，或改用「自定义直减」。`
+      }
+      if (this.form.type === 'FULL') return '满减金额必须大于 0，且小于使用门槛。'
+      return '直减金额必须大于 0。'
+    },
     zeroPricedCourses () {
       return this.selectedCourses.filter(item => this.payableAfterCoupon(item.price) === 0)
     },
@@ -437,6 +452,9 @@ export default {
       return `优惠后总价不能低于 0 元，否则会亏本。请下调优惠：${names}`
     },
     priceCheck () {
+      if (this.ruleInvalid) {
+        return { tone: 'error', title: this.ruleWarning }
+      }
       if (this.unsafePricedCourses.length) {
         return { tone: 'error', title: this.priceFloorWarning }
       }
@@ -616,9 +634,7 @@ export default {
     },
     submit () {
       if (!this.form.name) return this.$message.warning('请填写优惠券名称')
-      if (this.form.type === 'FULL' && Number(this.form.amount) > Number(this.form.threshold) && Number(this.form.threshold) > 0) {
-        return this.$message.warning('满减金额应小于使用门槛')
-      }
+      if (this.ruleInvalid) return this.$message.error(this.ruleWarning)
       if (this.unsafePricedCourses.length) {
         return this.$message.error(this.priceFloorWarning)
       }
