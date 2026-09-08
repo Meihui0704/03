@@ -29,8 +29,8 @@
           <p class="field-hint">一次任务只执行一种操作，避免同批次规则互相覆盖。</p>
           <template v-if="mode === 'shelf'">
             <el-radio-group v-model="shelfAction" class="choice-grid">
-              <el-radio-button label="ON"><strong>批量上架</strong><small>有效组合在指定时间可售</small></el-radio-button>
-              <el-radio-button label="OFF"><strong>批量下架</strong><small>有效组合在指定时间停售</small></el-radio-button>
+              <el-radio-button label="ON"><strong>批量上架</strong><small>生效起可售，截止后停售</small></el-radio-button>
+              <el-radio-button label="OFF"><strong>批量下架</strong><small>生效起停售，截止结束本次下架窗口</small></el-radio-button>
             </el-radio-group>
           </template>
           <template v-else>
@@ -68,14 +68,26 @@
         </section>
 
         <section class="field-block">
-          <div class="field-label">生效时间</div>
-          <el-date-picker
-            v-model="effectiveAt"
-            type="datetime"
-            value-format="yyyy-MM-dd HH:mm:ss"
-            placeholder="选择生效时间"
-            :picker-options="dateOptions"
-          />
+          <div class="field-label">{{ mode === 'shelf' ? '生效与截止时间' : '生效时间' }}</div>
+          <p class="field-hint">{{ timeHint }}</p>
+          <div :class="['time-fields', { split: mode === 'shelf' }]">
+            <el-date-picker
+              v-model="effectiveAt"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              placeholder="选择生效时间"
+              :picker-options="dateOptions"
+            />
+            <el-date-picker
+              v-if="mode === 'shelf'"
+              v-model="endAt"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              placeholder="选择截止时间"
+              :picker-options="dateOptions"
+            />
+          </div>
+          <p v-if="mode === 'shelf' && dateInvalid" class="date-warning">截止时间不能早于生效时间</p>
         </section>
 
         <el-button type="primary" class="save-btn" :loading="submitting" @click="submit">确认{{ mode === 'shelf' ? '执行' : '调价' }}</el-button>
@@ -97,6 +109,10 @@
           <div><span>班型</span><strong>{{ selectedProductIds.length }} 个</strong></div>
           <div><span>专业</span><strong>{{ professionIds.length }} 个</strong></div>
           <div><span>实际组合</span><strong>{{ impact.combinationCount }}</strong></div>
+          <template v-if="mode === 'shelf'">
+            <div><span>生效时间</span><strong>{{ effectiveAt || '未选' }}</strong></div>
+            <div><span>截止时间</span><strong>{{ endAt || '未选' }}</strong></div>
+          </template>
         </div>
         <p class="side-label">变更记录</p>
         <OperationLog :logs="logs" />
@@ -127,6 +143,7 @@ export default {
       professionIds: Array.isArray(transfer.professions) ? transfer.professions : [],
       productCache: allOperationProducts.map(item => ({ ...item })),
       effectiveAt: '',
+      endAt: '',
       submitting: false,
       dateOptions: { disabledDate: date => date.getTime() < Date.now() - 86400000 },
       logs: this.mode === 'shelf'
@@ -144,7 +161,7 @@ export default {
     title () { return this.mode === 'shelf' ? '商品课程上下架' : '商品批量调价' },
     description () {
       return this.mode === 'shelf'
-        ? '规则和班型填一次，专业按科室一键勾选，按实际覆盖组合批量上架或下架。'
+        ? '规则和班型填一次，专业按科室一键勾选，并填写生效与截止时间，按实际覆盖组合批量上架或下架。'
         : '规则和班型填一次，专业按科室一键勾选，按实际覆盖组合统一调价。'
     },
     selectedProductObjects () { return this.productCache.filter(item => this.selectedProductIds.includes(item.id)) },
@@ -156,6 +173,20 @@ export default {
       return `每个组合减免 ¥${this.priceValue}`
     },
     actionText () { return `“${this.actionLabel}”` },
+    timeHint () {
+      if (this.mode !== 'shelf') return '调价在指定时间生效。'
+      return this.shelfAction === 'ON'
+        ? '上架从生效时间开始可售，到截止时间停售。'
+        : '下架从生效时间开始停售，到截止时间结束本次下架窗口。是否自动恢复上架以后台为准。'
+    },
+    dateInvalid () {
+      if (this.mode !== 'shelf' || !this.effectiveAt || !this.endAt) return false
+      return new Date(this.endAt).getTime() <= new Date(this.effectiveAt).getTime()
+    },
+    timeWindowText () {
+      if (this.mode !== 'shelf') return `生效时间为 ${this.effectiveAt}`
+      return `生效时间为 ${this.effectiveAt}，截止时间为 ${this.endAt}`
+    },
     priceDetail () {
       if (this.mode !== 'price' || !this.selectedProductObjects.length) return ''
       const known = this.selectedProductObjects.filter(item => typeof item.price === 'number')
@@ -186,9 +217,11 @@ export default {
       if (!this.professionIds.length) return this.$message.warning('请先勾选至少一个专业')
       if (!this.impact.combinationCount) return this.$message.error('已选专业均不在商品覆盖范围内，请调整后再保存')
       if (!this.effectiveAt) return this.$message.warning('请选择生效时间')
+      if (this.mode === 'shelf' && !this.endAt) return this.$message.warning('请选择截止时间')
+      if (this.dateInvalid) return this.$message.error('截止时间不能早于生效时间，请检查日期')
       const mismatchText = this.impact.mismatched.length ? `；${this.impact.mismatched.length} 个不适用专业将被跳过` : ''
       this.$confirm(
-        `将对 ${this.impact.combinationCount} 个「商品 × 专业」组合执行${this.actionLabel}，生效时间为 ${this.effectiveAt}${mismatchText}。`,
+        `将对 ${this.impact.combinationCount} 个「商品 × 专业」组合执行${this.actionLabel}，${this.timeWindowText}${mismatchText}。`,
         `确认${this.mode === 'shelf' ? '批量操作' : '批量调价'}`,
         { confirmButtonText: '确认执行', cancelButtonText: '返回检查', type: 'warning' }
       ).then(() => {
@@ -201,7 +234,7 @@ export default {
           this.logs.unshift({
             time: '刚刚',
             user: '运营-美惠',
-            content: `${this.actionLabel}，实际影响 ${this.impact.combinationCount} 个组合；专业：${this.impact.valid.map(item => professionName(item.professionId)).join('、')}`
+            content: `${this.actionLabel}，${this.timeWindowText}，实际影响 ${this.impact.combinationCount} 个组合；专业：${this.impact.valid.map(item => professionName(item.professionId)).join('、')}`
           })
           this.submitting = false
           this.$message.success(`${this.actionLabel}任务已提交`)
@@ -238,7 +271,10 @@ export default {
 .number-setting{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding:14px 16px;background:#f7f8fa;border-radius:8px}
 .config-panel ::v-deep .product-list{max-height:240px}
 .config-panel ::v-deep .category-list{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.time-fields{display:grid;gap:10px}
+.time-fields.split{grid-template-columns:1fr 1fr}
 .config-panel .el-date-editor{width:100%}
+.date-warning{margin:8px 0 0;color:#8f1018;font-size:12px}
 .save-btn{width:100%;margin-top:6px}
 .save-note{margin:8px 0 0;color:var(--muted);font-size:12px;text-align:center}
 .side-label{margin:0 0 10px;color:var(--muted);font-size:12px;font-weight:700}
@@ -253,5 +289,6 @@ export default {
   .page-head{align-items:flex-start;flex-direction:column}
   .workspace-grid{grid-template-columns:1fr}
   .choice-grid{flex-direction:column}
+  .time-fields.split{grid-template-columns:1fr}
 }
 </style>
