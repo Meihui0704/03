@@ -99,7 +99,28 @@
           <label class="field-label">目标页面</label><select v-model="destination.page" class="control full" @change="destination.selected = null"><option value="">请选择目标页面</option><option v-for="page in targetPages" :key="page.code" :value="page.code">{{ page.name }}</option></select>
           <div v-if="selectedPage && selectedPage.requires" class="picker">
             <template v-if="destination.selected"><div class="picker-head"><div><h3>已选择具体内容</h3><p>同时保存名称和 ID。</p></div><button class="text-btn" type="button" @click="destination.selected = null">重新选择</button></div><div class="selected-content"><span><strong>{{ destination.selected.name }}</strong><small>ID {{ destination.selected.id }}</small></span>✓</div></template>
-            <template v-else><div class="picker-head"><div><h3>选择具体内容</h3><p>项目、专业、科目和章节由真实内容接口联动返回。</p></div></div><div class="content-filters"><input v-model.trim="contentKeyword" class="control" placeholder="名称或 ID"><select class="control"><option>临床</option></select><select class="control"><option>临床执业医师</option><option>临床助理医师</option></select><select class="control"><option>全部科目</option><option>高频题库</option></select><select class="control"><option>全部章节</option><option>呼吸系统</option></select><button class="btn blue" type="button" @click="contentSearched = true">查询</button></div><div v-if="contentSearched" class="result-list"><label v-for="item in contentResults" :key="item.id"><input v-model="pendingContentId" type="radio" :value="item.id"><span><strong>{{ item.name }}</strong><small>ID {{ item.id }} · {{ item.project }} · {{ item.profession }}</small></span></label><button v-if="pendingContentId" class="btn" type="button" @click="selectContent">使用所选内容</button></div><p v-else class="empty small">点击查询加载可选内容</p></template>
+            <template v-else>
+              <div class="picker-head">
+                <div>
+                  <h3>选择具体内容</h3>
+                  <p v-if="needsProductCatalog">商品详情 / 列表必须搜索现有商品 ID，与优惠券同一商品库。</p>
+                  <p v-else>试卷等具体内容按名称或 ID 查询。未确认的 ID 不编造。</p>
+                </div>
+              </div>
+              <div class="content-filters">
+                <input v-model.trim="contentKeyword" class="control" :placeholder="needsProductCatalog ? '商品 ID 或班型名，如 460' : '名称或 ID'">
+                <button class="btn blue" type="button" @click="contentSearched = true">查询</button>
+              </div>
+              <div v-if="contentSearched" class="result-list">
+                <label v-for="item in contentResults" :key="item.id">
+                  <input v-model="pendingContentId" type="radio" :value="item.id">
+                  <span><strong>{{ item.name }}</strong><small>ID {{ item.id }} · {{ item.project }} · {{ item.profession }}</small></span>
+                </label>
+                <p v-if="!contentResults.length" class="empty small">没有匹配结果</p>
+                <button v-if="pendingContentId" class="btn" type="button" @click="selectContent">使用所选内容</button>
+              </div>
+              <p v-else class="empty small">输入 ID 后点查询</p>
+            </template>
           </div>
         </template>
         <template v-else-if="destination.mode === 'APP_OUT'"><label class="field-label">外部链接</label><input v-model.trim="destination.externalUrl" class="control full" placeholder="https://"></template>
@@ -127,6 +148,7 @@
 import AssetViewer from './src/components/AssetViewer.vue'
 import assetPreview from './src/mixins/assetPreview'
 import { matchesOffRange, toDatetimeLocal } from './src/domain/adValidation'
+import { allOperationProducts, matchesProductKeyword } from './src/data/phase1Business'
 
 const projects = [
   { name: '临床', professions: ['临床执业医师', '临床助理医师'] },
@@ -174,7 +196,21 @@ export default {
     },
     allVisibleSelected () { return this.filteredRows.length > 0 && this.filteredRows.every(row => this.selectedIds.includes(row.id)) },
     selectedPage () { return this.targetPages.find(page => page.code === this.destination.page) },
-    contentResults () { const query = this.contentKeyword.toLowerCase(); return contentPool.filter(item => !query || `${item.name} ${item.id}`.toLowerCase().includes(query)) },
+    needsProductCatalog () { return this.destination.page === 'PRODUCT_DETAIL' || this.destination.page === 'PRODUCT_LIST' },
+    contentResults () {
+      const query = this.contentKeyword
+      if (this.needsProductCatalog) {
+        if (!String(query || '').trim()) return []
+        return allOperationProducts.filter(item => matchesProductKeyword(item, query)).slice(0, 20).map(item => ({
+          id: String(item.id),
+          name: item.name,
+          project: item.project,
+          profession: (item.scope || []).slice(0, 2).join('、') + ((item.scope || []).length > 2 ? '等' : '')
+        }))
+      }
+      const term = String(query || '').toLowerCase()
+      return contentPool.filter(item => !term || `${item.name} ${item.id}`.toLowerCase().includes(term))
+    },
     destinationSummary () { if (this.destination.mode === 'APP_IN') return this.selectedPage ? `${this.selectedPage.name}${this.destination.selected ? ` · ${this.destination.selected.name}（ID ${this.destination.selected.id}）` : ''}` : '尚未选择目标页面'; if (this.destination.mode === 'APP_OUT') return this.destination.externalUrl || '尚未填写外部链接'; return this.destination.miniAppId && this.destination.miniPath ? `小程序 ${this.destination.miniAppId} · ${this.destination.miniPath}` : '尚未填写小程序信息' }
   },
   created () { this.loadRows() },
@@ -215,7 +251,14 @@ export default {
     saveEntry (goNext) { if (!this.form.name) { this.$message.warning('请填写入口名称'); return } if (!this.form.projects.length || !this.form.professions.length) { this.$message.warning('请至少选择一个项目和专业'); return } if (this.form.periodType === 'range' && (!this.form.start || !this.form.end || this.form.end < this.form.start)) { this.$message.warning('请填写正确的有效期'); return } const now = this.nowText(); let row = this.rows.find(item => item.id === this.editingId); const base = { name: this.form.name, icon: this.form.name.slice(0, 1), iconUrl: this.form.iconUrl, app: this.form.app, page: '首页', position: this.form.position, project: this.form.projects.join('、'), profession: this.form.professions.join('、'), period: this.form.periodType === 'long' ? '长期' : `${this.form.start} 至 ${this.form.end}`, updatedBy: '美惠', updatedAt: now }; if (row) Object.assign(row, base); else { row = { ...base, id: Math.max(1200, ...this.rows.map(item => item.id + 1)), target: '尚未配置', content: '请配置具体内容', contentId: '', status: 'OFF', offAt: now }; this.rows.unshift(row) } this.persist(); this.editorVisible = false; this.focusRecord(row.id); if (goNext) { this.showToast('基础信息已保存，继续配置点击去向'); this.openDestination(row) } else this.showToast('入口基础信息已保存') },
     openDestination (row) { const saved = row.destination || {}; this.activeRow = row; this.destination = { mode: saved.mode || 'APP_IN', page: saved.page || this.targetPages.find(item => item.name === row.target)?.code || '', selected: row.contentId ? { id: row.contentId, name: row.content } : null, externalUrl: saved.externalUrl || '', miniAppId: saved.miniAppId || '', miniPath: saved.miniPath || '' }; this.contentKeyword = ''; this.contentSearched = false; this.pendingContentId = ''; this.destinationVisible = true },
     changeMode (mode) { this.destination = { ...blankDestination(), mode } },
-    selectContent () { this.destination.selected = contentPool.find(item => item.id === this.pendingContentId) || null },
+    selectContent () {
+      const product = allOperationProducts.find(item => String(item.id) === String(this.pendingContentId))
+      if (product) {
+        this.destination.selected = { id: String(product.id), name: product.name, project: product.project, profession: (product.scope || []).join('、') }
+        return
+      }
+      this.destination.selected = contentPool.find(item => item.id === this.pendingContentId) || null
+    },
     saveDestination () { const page = this.selectedPage; if (this.destination.mode === 'APP_IN' && !page) { this.$message.warning('请先选择目标页面'); return } if (this.destination.mode === 'APP_IN' && page.requires && !this.destination.selected) { this.$message.warning('请选择具体内容'); return } if (this.destination.mode === 'APP_OUT' && !/^https:\/\//i.test(this.destination.externalUrl)) { this.$message.warning('请输入 https:// 开头的完整外部链接'); return } if (this.destination.mode === 'MINI' && (!this.destination.miniAppId || !this.destination.miniPath)) { this.$message.warning('请填写小程序 AppID 和页面路径'); return } const row = this.activeRow; row.destination = { mode: this.destination.mode, page: this.destination.page, externalUrl: this.destination.externalUrl, miniAppId: this.destination.miniAppId, miniPath: this.destination.miniPath }; row.target = this.destination.mode === 'APP_IN' ? page.name : this.destination.mode === 'APP_OUT' ? '外部链接' : '小程序'; row.content = this.destination.mode === 'APP_IN' ? (this.destination.selected ? this.destination.selected.name : '无需选择具体内容') : this.destination.mode === 'APP_OUT' ? this.destination.externalUrl : this.destination.miniPath; row.contentId = this.destination.selected?.id || ''; row.updatedAt = this.nowText(); this.persist(); this.destinationVisible = false; this.focusRecord(row.id); this.showToast('点击去向已保存，可使用“查看详情”复查') },
     openPreview (row) { this.activeRow = row; this.previewVisible = true },
     entryIconSrc (row) { return row.iconUrl || this.letterIconDataUrl(row.icon || row.name.slice(0, 1)) },

@@ -107,7 +107,10 @@
         <div class="radio-row"><label v-for="name in targetTypes" :key="name" :class="{ active: form.targetType === name }"><input v-model="form.targetType" type="radio" :value="name">{{ name }}</label></div>
         <div class="form-grid destination-fields">
           <label v-if="form.targetType === '商品'"><span>商品类型</span><select v-model="form.productType" class="control"><option v-for="name in productTypes" :key="name">{{ name }}</option></select></label>
-          <label v-if="form.targetType === '商品'"><span>选择班型／商品</span><input v-model.trim="form.product" class="control" :placeholder="`输入${form.productType}名称或商品 ID`"><small>原型未接商品库；正式版从后台商品接口搜索</small></label>
+          <label v-if="form.targetType === '商品'" class="wide"><span>选择班型／商品</span>
+            <product-id-search :product-id="form.productId" :product-name="form.product" @select="onPickProduct" />
+            <small>必须从商品库选定并保存商品 ID，不能手填。接入后走同一套商品搜索接口。</small>
+          </label>
           <label v-if="form.targetType === '页面' || form.targetType === '外部链接'" class="wide"><span>{{ form.targetType === '页面' ? '页面名称' : '外部链接' }}</span><input v-model.trim="form.targetValue" class="control" :placeholder="form.targetType === '页面' ? '输入页面名称' : '输入 https:// 链接'"></label>
           <div class="destination-summary">点击图片后打开：{{ destinationSummary }}</div>
         </div>
@@ -151,6 +154,7 @@
 
 <script>
 import { taxonomy } from './src/data/phase1Business'
+import ProductIdSearch from './src/components/ProductIdSearch.vue'
 import { AD_TYPE_OPTIONS } from './src/domain/adEnums'
 import { inspectImageFile, checkImageAgainstType, validateAd, timeValue, matchesOffRange, toDatetimeLocal } from './src/domain/adValidation'
 import { createAdsApi, canonicalProject, canonicalProfession, matchProject, matchProfession } from './src/api/adsApi'
@@ -182,14 +186,14 @@ const toInputTime = (value, fallback) => {
 const blankForm = () => ({
   app: '昭昭医考App', adType: '轮播图', page: '首页', position: '图1',
   project: '临床', profession: '临床执业医师', projectId: 119, professionId: 24,
-  targetType: '商品', productType: '课程', product: '', targetValue: '',
+  targetType: '商品', productType: '课程', product: '', productId: '', targetValue: '',
   start: '2026-08-31T00:00', end: '2026-11-30T00:00', status: 'off',
   image: '', imageWidth: 0, imageHeight: 0, imageName: ''
 })
 
 export default {
   name: 'AdvertisingMaterial',
-  components: { AssetViewer },
+  components: { AssetViewer, ProductIdSearch },
   mixins: [assetPreview],
   data () {
     return {
@@ -278,7 +282,7 @@ export default {
     },
     imagePreviewClass () { return ['preview', this.thumbClass({ adType: this.form.adType })] },
     destinationSummary () {
-      if (this.form.targetType === '商品') return `${this.form.project} ＞ ${this.form.profession || '未选专业'} ＞ ${this.form.productType} ＞ ${this.form.product || '请选择班型／商品'}`
+      if (this.form.targetType === '商品') return `${this.form.project} ＞ ${this.form.profession || '未选专业'} ＞ ${this.form.productType} ＞ ${this.form.productId ? `ID ${this.form.productId} ${this.form.product}` : '请搜索并选定商品'}`
       if (this.form.targetType === '无跳转') return '只展示图片，点击后不跳转'
       return this.form.targetValue || `请填写${this.form.targetType === '页面' ? '页面名称' : '外部链接'}`
     }
@@ -372,6 +376,7 @@ export default {
         project: this.canonicalProject(row.project),
         profession: this.canonicalProfession(row.profession),
         targetType: row.targetType || '商品',
+        productId: row.productId || '',
         targetValue: row.targetValue || '',
         start: toInputTime(row.start, '2026-08-31T00:00'),
         end: toInputTime(row.end, '2026-11-30T00:00'),
@@ -396,6 +401,10 @@ export default {
       const fit = checkImageAgainstType(this.form.adType, result.width, result.height)
       if (!fit.ok) this.$message.warning(fit.message)
       else this.$message.success(fit.message)
+    },
+    onPickProduct (item) {
+      this.form.productId = item.id
+      this.form.product = item.name
     },
     async saveAd () {
       const result = validateAd(this.form, this.ads, { ignoreId: this.editingId })

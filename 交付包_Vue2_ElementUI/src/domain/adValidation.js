@@ -119,7 +119,7 @@ export function validateAd (form, rows, options = {}) {
   if (form.adType === '轮播图' && !form.position) errors.push('轮播图必须选择展示顺序')
   if (!form.start || !form.end) errors.push('请填写投放开始和结束时间')
   if (form.end && form.start && form.end <= form.start) errors.push('结束时间必须晚于开始时间')
-  if (form.targetType === '商品' && !form.product) errors.push('请填写班型或商品')
+  if (form.targetType === '商品' && !form.productId) errors.push('请搜索并选定商品 ID，不能手填班型名')
   if ((form.targetType === '页面' || form.targetType === '外部链接') && !form.targetValue) errors.push(`请填写${form.targetType}`)
   if (form.targetType === '外部链接' && form.targetValue && !/^https:\/\//i.test(form.targetValue)) errors.push('外部链接必须以 https:// 开头')
   if (form.status === 'on' && !form.image) errors.push('上架前必须上传图片。可先保存为下架。')
