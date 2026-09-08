@@ -23,7 +23,6 @@
         <el-table-column prop="name" label="项目名称" min-width="180"><template slot-scope="s"><strong>{{ s.row.name }}</strong></template></el-table-column>
         <el-table-column prop="sort" label="排序" width="90" />
         <el-table-column label="状态" width="110"><template><span class="status on">上架</span></template></el-table-column>
-        <el-table-column label="数据提醒" min-width="170"><template slot-scope="s"><span v-if="s.row.duplicate" class="warning-text">存在同名历史 ID</span><span v-else class="muted">—</span></template></el-table-column>
         <el-table-column label="操作" width="210" fixed="right"><template slot-scope="s"><el-button type="text" @click="openProjectEditor(s.row)">编辑</el-button><el-button type="text" @click="askAction('项目', s.row, 'archive')">下架</el-button><el-button type="text" class="danger-text" @click="askAction('项目', s.row, 'delete')">删除</el-button></template></el-table-column>
       </el-table></div>
     </template>
