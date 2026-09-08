@@ -119,7 +119,7 @@
                 <p v-if="!contentResults.length" class="empty small">没有匹配结果</p>
                 <button v-if="pendingContentId" class="btn" type="button" @click="selectContent">使用所选内容</button>
               </div>
-              <p v-else class="empty small">输入 ID 后点查询</p>
+              <p v-else class="empty small">输入班型名称后点查询</p>
             </template>
           </div>
         </template>
