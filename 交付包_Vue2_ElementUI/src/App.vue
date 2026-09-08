@@ -68,7 +68,7 @@ export default {
         title: '',
         items: [
           { label: 'App优惠券管理', path: '/coupon-tasks' },
-          { label: 'App免费体验课管理', path: '/trial-course' },
+          { label: 'App引流课管理', path: '/trial-course' },
           { label: 'App商品推荐管理', path: '/product-recommend' }
         ]
       }
