@@ -109,7 +109,7 @@
           <label v-if="form.targetType === '商品'"><span>商品类型</span><select v-model="form.productType" class="control"><option v-for="name in productTypes" :key="name">{{ name }}</option></select></label>
           <label v-if="form.targetType === '商品'" class="wide"><span>选择班型／商品</span>
             <product-id-search :product-id="form.productId" :product-name="form.product" @select="onPickProduct" />
-            <small>必须从商品库选定并保存商品 ID，不能手填。接入后走同一套商品搜索接口。</small>
+            <small>按班型名搜索并点选，系统保存商品 ID。不要手填一个对不上库的名字。</small>
           </label>
           <label v-if="form.targetType === '页面' || form.targetType === '外部链接'" class="wide"><span>{{ form.targetType === '页面' ? '页面名称' : '外部链接' }}</span><input v-model.trim="form.targetValue" class="control" :placeholder="form.targetType === '页面' ? '输入页面名称' : '输入 https:// 链接'"></label>
           <div class="destination-summary">点击图片后打开：{{ destinationSummary }}</div>

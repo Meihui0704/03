@@ -15,8 +15,8 @@
           <small>{{ item.project }} · 覆盖 {{ (item.scope || []).length }} 个专业</small>
         </button>
       </li>
-      <li v-if="keyword && !hits.length" class="empty">没有匹配的商品 ID 或名称。未确认的 ID 不会编造。</li>
-      <li v-else-if="!keyword" class="empty">输入商品 ID（如 460）或班型名，从现有商品库选定。</li>
+      <li v-if="keyword && !hits.length" class="empty">没有匹配的班型。可以换个常用名再搜；商品 ID 也能搜到。</li>
+      <li v-else-if="!keyword" class="empty">输入班型名称搜索，和现在习惯一样。选定后会保存商品 ID。</li>
     </ul>
   </div>
 </template>
@@ -29,7 +29,7 @@ export default {
   props: {
     productId: { type: [String, Number], default: '' },
     productName: { type: String, default: '' },
-    placeholder: { type: String, default: '搜索商品 ID 或班型名，如 460' }
+    placeholder: { type: String, default: '搜索班型名称，如密训班' }
   },
   data () {
     return { keyword: '' }

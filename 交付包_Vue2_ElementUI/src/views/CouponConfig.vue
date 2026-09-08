@@ -52,7 +52,7 @@
       <div>
         <div class="breadcrumb"><span>运营管理</span><i class="el-icon-arrow-right" />App优惠券管理</div>
         <h1 class="page-title">App优惠券管理</h1>
-        <p class="page-description">先按商品 ID 或班型名找到课，再按项目和科室批量勾选专业，一次性生成实际生效的「商品 × 专业」优惠券。</p>
+        <p class="page-description">先按班型名称找到课（和日常习惯一样），选中后带上商品 ID，再按项目和科室批量勾选专业。</p>
       </div>
       <div class="head-actions">
         <el-button @click="view = 'list'">返回任务列表</el-button>
@@ -71,7 +71,7 @@
 
     <aside class="intro-banner" aria-label="当前改造说明">
       <p><strong>当前痛点</strong>人工给中级职称约 39 个专业逐条取名、勾选、分配优惠券，实测要 2–3 小时，专业数还会继续增加。</p>
-      <p><strong>这次怎么做</strong>用商品 ID 锁定班型（实操如 ID 460「4天三夜密训班」只覆盖临床执业、助理两个专业）。批量优势要靠中级职称这种多专业一次勾选才能看出来。</p>
+      <p><strong>这次怎么做</strong>日常搜班型名即可，例如「4天三夜密训班」。选中后会带上商品 ID 460，避免配错课。它只覆盖临床执业、助理两个专业，批量优势要靠中级职称这种多专业一次勾选才看得出来。</p>
       <p><strong>演示任务</strong>默认勾「2027年中级职称精英班」，展开「中级职称」全选内科类。不要用只有两个专业的临床班型当主演示。</p>
     </aside>
 
@@ -136,7 +136,7 @@
         <div class="field-row">
           <div class="field-label"><span class="req">*</span>所属课程（班型商品）</div>
           <div class="course-toolbar">
-            <el-input v-model.trim="courseKeyword" clearable prefix-icon="el-icon-search" placeholder="搜索商品 ID 或班型名，如 460、密训班、精英班" />
+            <el-input v-model.trim="courseKeyword" clearable prefix-icon="el-icon-search" placeholder="搜索班型名称，如密训班、精英班" />
             <el-button type="primary" @click="showAddCourse = !showAddCourse">＋ 新增商品</el-button>
           </div>
           <div v-if="showAddCourse" class="add-course">
@@ -175,7 +175,7 @@
               <button type="button" aria-label="取消该商品" @click="toggleCourse(course.id)">×</button>
             </span>
           </div>
-          <p class="field-note">用商品 ID 或班型名搜索。临床两个专业也能配，但要看批量省时请用中级职称一次勾选。</p>
+          <p class="field-note">按名称搜索，和现在工作习惯一样。列表会显示商品 ID，选中后按 ID 落库。临床两个专业也能配，要看批量省时请用中级职称一次勾选。</p>
         </div>
 
         <div class="field-row">

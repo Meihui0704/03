@@ -103,12 +103,12 @@
               <div class="picker-head">
                 <div>
                   <h3>选择具体内容</h3>
-                  <p v-if="needsProductCatalog">商品详情 / 列表必须搜索现有商品 ID，与优惠券同一商品库。</p>
-                  <p v-else>试卷等具体内容按名称或 ID 查询。未确认的 ID 不编造。</p>
+                  <p v-if="needsProductCatalog">按班型名称搜索现有商品，选定后保存 ID。和优惠券同一商品库。</p>
+                  <p v-else>试卷等具体内容按名称查询。未确认的 ID 不编造。</p>
                 </div>
               </div>
               <div class="content-filters">
-                <input v-model.trim="contentKeyword" class="control" :placeholder="needsProductCatalog ? '商品 ID 或班型名，如 460' : '名称或 ID'">
+                <input v-model.trim="contentKeyword" class="control" :placeholder="needsProductCatalog ? '搜索班型名称，如密训班' : '名称或 ID'">
                 <button class="btn blue" type="button" @click="contentSearched = true">查询</button>
               </div>
               <div v-if="contentSearched" class="result-list">

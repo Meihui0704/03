@@ -3,7 +3,7 @@
     <div class="picker-head">
       <div>
         <h3 id="product-picker-title">商品课程</h3>
-        <p>按商品 ID 或名称查找。中级职称这种多专业班型，才能看出一次勾选的优势。</p>
+        <p>按班型名称查找，和现在习惯一样。选中后带商品 ID。中级职称这种多专业班型，才能看出一次勾选的优势。</p>
       </div>
       <el-button type="primary" plain icon="el-icon-plus" @click="addVisible = true">新增商品</el-button>
     </div>
@@ -14,7 +14,7 @@
         <el-radio-button label="中级职称">中级职称（{{ middleCount }}）</el-radio-button>
         <el-radio-button label="临床">临床（{{ clinicalCount }}）</el-radio-button>
       </el-radio-group>
-      <el-input v-model.trim="keyword" clearable prefix-icon="el-icon-search" placeholder="搜索商品 ID 或名称，如 460" aria-label="搜索商品 ID 或名称" />
+      <el-input v-model.trim="keyword" clearable prefix-icon="el-icon-search" placeholder="搜索班型名称" aria-label="搜索班型名称" />
     </div>
 
     <div v-if="value.length" class="selected-bar">
