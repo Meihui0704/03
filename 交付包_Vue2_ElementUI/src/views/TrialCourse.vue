@@ -1,224 +1,273 @@
 <template>
-  <section class="trial-page">
+  <section class="page">
     <header class="page-head">
       <div>
         <div class="breadcrumb"><span>运营管理</span><i class="el-icon-arrow-right" />App引流课管理</div>
         <h1 class="page-title">App引流课管理</h1>
-        <p class="page-description">从商品编辑挪到这里，按项目和专业配置头图、列表免费试听。不再使用「精华体验课」任务。</p>
+        <p class="page-description">按原「App免费体验课」后台来：先管引流课，再进配置内容，用关联小节去搜音视频绑定。不再使用「精华体验课」这个名字。</p>
       </div>
-      <el-button type="primary" :loading="saving" @click="save">保存配置</el-button>
     </header>
 
     <aside class="intro-banner">
-      <p>字段名与商品后台一致：<b>配置头图免费试听</b>、<b>配置列表免费试听</b>。第一个下拉先选已有商品；第二个下拉是试听内容，选项以后台返回为准，这里不编造小节 ID。</p>
+      <p>这里不是商品页那两个下拉。运营动作是：编辑/复制/禁用引流课 → 配置内容（福利一、福利二）→ 关联小节。添加小节时用音视频 ID 或名称查询已有素材，选中后绑定，不在这里新建商品。</p>
     </aside>
 
-    <div class="workspace-grid">
-      <div class="config-panel">
-        <section class="field-block">
-          <div class="field-label">项目与专业</div>
-          <p class="field-hint">对应商品页里写在试听前面的「临床 临床助理医师」。换专业会带出该专业已保存的配置。</p>
-          <div class="scope-row">
-            <el-select v-model="project" placeholder="请选择项目" @change="onProjectChange">
-              <el-option v-for="item in projects" :key="item" :label="item" :value="item" />
-            </el-select>
-            <el-select v-model="profession" placeholder="请选择专业" filterable @change="loadCurrent">
-              <el-option v-for="item in professionOptions" :key="item" :label="item" :value="item" />
-            </el-select>
-          </div>
-        </section>
-
-        <section class="field-block">
-          <div class="field-label">配置头图免费试听</div>
-          <p class="field-hint">头图只配一条。未选出试听内容时，保存后仍显示待对接。</p>
-          <div class="trial-row">
-            <span class="scope-chip">{{ project }} {{ profession }}</span>
-            <el-select v-model="banner.productId" clearable filterable placeholder="请选择">
-              <el-option v-for="item in productOptions" :key="item.id" :label="item.name" :value="item.id" />
-            </el-select>
-            <el-select v-model="banner.trialId" clearable filterable placeholder="请选择" no-data-text="试听内容待对接">
-              <el-option v-for="item in trialOptions" :key="item.id" :label="item.name" :value="item.id" />
-            </el-select>
-          </div>
-        </section>
-
-        <section class="field-block last">
-          <div class="field-label">配置列表免费试听</div>
-          <p class="field-hint">可加多条，对应商品页右侧的 +。</p>
-          <div v-for="(row, index) in listRows" :key="row.key" class="trial-row">
-            <span class="scope-chip">{{ project }} {{ profession }}</span>
-            <el-select v-model="row.productId" clearable filterable placeholder="请选择">
-              <el-option v-for="item in productOptions" :key="item.id" :label="item.name" :value="item.id" />
-            </el-select>
-            <el-select v-model="row.trialId" clearable filterable placeholder="请选择" no-data-text="试听内容待对接">
-              <el-option v-for="item in trialOptions" :key="item.id" :label="item.name" :value="item.id" />
-            </el-select>
-            <el-button type="text" class="remove-row" :disabled="listRows.length === 1" @click="removeListRow(index)">删除</el-button>
-          </div>
-          <el-button type="text" class="add-row" @click="addListRow">+ 添加列表试听</el-button>
-        </section>
-      </div>
-
-      <aside class="side-column">
-        <p class="side-label">已配置专业</p>
-        <el-table :data="savedRows" empty-text="还没有保存过引流课配置">
-          <el-table-column prop="project" label="项目" width="88" />
-          <el-table-column prop="profession" label="专业" min-width="120" />
-          <el-table-column label="头图试听" min-width="160">
-            <template slot-scope="s">{{ productName(s.row.banner.productId) || '未选' }}</template>
-          </el-table-column>
-          <el-table-column label="列表" width="72">
-            <template slot-scope="s">{{ filledListCount(s.row.list) }} 条</template>
-          </el-table-column>
-          <el-table-column label="" width="64">
-            <template slot-scope="s">
-              <el-button type="text" @click="openSaved(s.row)">查看</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </aside>
+    <div class="filters">
+      <el-select v-model="project" clearable placeholder="全部项目">
+        <el-option label="中级职称" value="中级职称" />
+        <el-option label="临床" value="临床" />
+      </el-select>
+      <el-radio-group v-model="status">
+        <el-radio-button label="ON">使用中</el-radio-button>
+        <el-radio-button label="OFF">已禁用</el-radio-button>
+        <el-radio-button label="ALL">全部</el-radio-button>
+      </el-radio-group>
     </div>
+
+    <el-table :data="visible">
+      <el-table-column prop="name" label="名称" min-width="160" />
+      <el-table-column prop="project" label="项目" width="120" />
+      <el-table-column prop="profession" label="专业" width="160" />
+      <el-table-column label="状态" width="100">
+        <template slot-scope="s">
+          <el-tag :type="s.row.status === 'ON' ? 'success' : 'info'">{{ s.row.status === 'ON' ? '使用中' : '已禁用' }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="320">
+        <template slot-scope="s">
+          <el-button type="text" @click="openContents(s.row)">配置内容</el-button>
+          <el-button type="text" @click="edit(s.row)">编辑</el-button>
+          <el-button type="text" @click="copyRow(s.row)">复制</el-button>
+          <el-button type="text" @click="s.row.status = s.row.status === 'ON' ? 'OFF' : 'ON'">{{ s.row.status === 'ON' ? '禁用' : '启用' }}</el-button>
+          <el-button type="text" class="danger" @click="removeRow(s.row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-dialog :title="current ? '编辑引流课' : '新增引流课'" :visible.sync="editDialog" width="560px">
+      <el-form label-width="88px">
+        <el-form-item label="名称"><el-input v-model="draft.name" /></el-form-item>
+        <el-form-item label="项目">
+          <el-select v-model="draft.project">
+            <el-option label="中级职称" value="中级职称" />
+            <el-option label="临床" value="临床" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="专业"><el-input v-model="draft.profession" placeholder="与后台专业名称一致" /></el-form-item>
+      </el-form>
+      <span slot="footer">
+        <el-button @click="editDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveEdit">保存</el-button>
+      </span>
+    </el-dialog>
+
+    <el-dialog title="配置内容" :visible.sync="contentDialog" width="1080px" class="wide-dialog">
+      <el-table :data="current ? current.contents : []">
+        <el-table-column prop="id" label="ID" width="72" />
+        <el-table-column prop="name" label="名称" width="100" />
+        <el-table-column prop="project" label="项目" width="110" />
+        <el-table-column prop="profession" label="专业" width="150" />
+        <el-table-column label="关联小节ID/名称/vid" min-width="240">
+          <template slot-scope="s">
+            <div v-if="s.row.sectionId" class="section-cell">
+              <span>{{ s.row.sectionId }}</span>
+              <span>{{ s.row.sectionName }}</span>
+              <small>{{ s.row.vid }}</small>
+            </div>
+            <span v-else class="muted">未关联</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="所属科目" width="110">
+          <template>引流课</template>
+        </el-table-column>
+        <el-table-column prop="updatedAt" label="修改" width="170" />
+        <el-table-column label="操作" width="110">
+          <template slot-scope="s">
+            <el-button type="text" @click="openSectionPicker(s.row)">关联小节</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <el-dialog title="添加小节" :visible.sync="sectionDialog" width="1180px" class="wide-dialog">
+      <div class="section-filters">
+        <el-input v-model.trim="sectionQuery.mediaId" clearable placeholder="音视频id" />
+        <el-input v-model.trim="sectionQuery.keyword" clearable placeholder="音视频名称/vid" />
+        <el-select v-model="sectionQuery.project" placeholder="项目">
+          <el-option label="中级职称" value="中级职称" />
+        </el-select>
+        <el-select v-model="sectionQuery.profession" placeholder="专业">
+          <el-option label="内分泌主治(309)" value="内分泌主治(309)" />
+        </el-select>
+        <el-select v-model="sectionQuery.pack" clearable placeholder="所属包">
+          <el-option label="全部" value="" />
+        </el-select>
+        <el-select v-model="sectionQuery.outline" clearable placeholder="所属大纲">
+          <el-option label="专业实践能力" value="专业实践能力" />
+        </el-select>
+        <el-select v-model="sectionQuery.subject" clearable placeholder="所属科目">
+          <el-option label="矿盐和骨代谢性疾病" value="矿盐和骨代谢性疾病" />
+        </el-select>
+        <el-button type="primary" @click="searchSections">查询</el-button>
+        <el-button @click="resetSectionQuery">重置</el-button>
+      </div>
+      <el-table :data="filteredMedia" @current-change="pickedMedia = $event">
+        <el-table-column width="48">
+          <template slot-scope="s">
+            <el-radio v-model="pickedId" :label="s.row.id">&nbsp;</el-radio>
+          </template>
+        </el-table-column>
+        <el-table-column prop="id" label="音视频ID" width="100" />
+        <el-table-column label="音视频名称" min-width="220">
+          <template slot-scope="s">
+            <div>{{ s.row.name }}</div>
+            <small class="vid">{{ s.row.vid }}</small>
+          </template>
+        </el-table-column>
+        <el-table-column prop="duration" label="时长(分)" width="90" />
+        <el-table-column prop="type" label="类型" width="72" />
+        <el-table-column prop="project" label="项目" width="110" />
+        <el-table-column prop="profession" label="专业" width="140" />
+        <el-table-column prop="outline" label="所属大纲" width="130" />
+        <el-table-column prop="subject" label="所属科目" min-width="160" />
+      </el-table>
+      <span slot="footer">
+        <el-button @click="sectionDialog = false">取消</el-button>
+        <el-button type="primary" @click="bindSection">确定关联</el-button>
+      </span>
+    </el-dialog>
   </section>
 </template>
 
 <script>
-import { allOperationProducts, taxonomy } from '../data/phase1Business'
+const seedContents = [
+  { id: 106, name: '福利一', project: '中级职称', profession: '内分泌主治(309)', sectionId: 64607, sectionName: '发热 (上)', vid: '026b8dcd978dde0551995e09eefdaaa0_0', updatedAt: '2024-12-03 14:27:45' },
+  { id: 107, name: '福利二', project: '中级职称', profession: '内分泌主治(309)', sectionId: 64608, sectionName: '原发性高血压 (中)', vid: '026b8dcd978dde0551995e09eefdaaa0_0', updatedAt: '2024-12-03 14:27:45' },
+  { id: 108, name: '福利三', project: '中级职称', profession: '内分泌主治(309)', sectionId: '', sectionName: '', vid: '', updatedAt: '2024-12-03 14:27:45' },
+  { id: 109, name: '福利四', project: '中级职称', profession: '内分泌主治(309)', sectionId: '', sectionName: '', vid: '', updatedAt: '2024-12-03 14:27:45' }
+]
 
-const storageKey = 'lead-course-demo-v1'
-
-function blankListRow () {
-  return { key: `row-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`, productId: '', trialId: '' }
-}
-
-function loadSaved () {
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(storageKey) || '[]')
-    return Array.isArray(parsed) ? parsed : []
-  } catch (error) {
-    return []
-  }
-}
+const mediaLibrary = [
+  { id: 78119, name: '骨软化症', vid: '026b8dcd978dde0551995e09eefdaaa0_0', duration: 20.92, type: '视频', project: '中级职称', profession: '内分泌主治(309)', outline: '专业实践能力', subject: '矿盐和骨代谢性疾病' }
+]
 
 export default {
   name: 'TrialCourse',
   data () {
     return {
-      project: '临床',
-      profession: '临床助理医师',
-      banner: { productId: '', trialId: '' },
-      listRows: [blankListRow()],
-      savedRows: [],
-      saving: false,
-      trialOptions: []
+      project: '',
+      status: 'ON',
+      editDialog: false,
+      contentDialog: false,
+      sectionDialog: false,
+      current: null,
+      linking: null,
+      pickedMedia: null,
+      pickedId: '',
+      draft: { name: '', project: '中级职称', profession: '' },
+      sectionQuery: { mediaId: '', keyword: '', project: '中级职称', profession: '内分泌主治(309)', pack: '', outline: '', subject: '' },
+      mediaLibrary,
+      rows: [
+        {
+          name: '引流课',
+          project: '中级职称',
+          profession: '内分泌主治(309)',
+          status: 'ON',
+          contents: seedContents.map(item => ({ ...item }))
+        }
+      ]
     }
   },
   computed: {
-    projects () { return taxonomy.map(item => item.name) },
-    professionOptions () {
-      const category = taxonomy.find(item => item.name === this.project)
-      if (!category) return []
-      return category.groups.reduce((list, group) => list.concat(group.items), [])
+    visible () {
+      return this.rows.filter(row => {
+        if (this.project && row.project !== this.project) return false
+        if (this.status !== 'ALL' && row.status !== this.status) return false
+        return true
+      })
     },
-    productOptions () {
-      return allOperationProducts.filter(item => !item.scope || item.scope.includes(this.profession))
+    filteredMedia () {
+      const id = this.sectionQuery.mediaId.trim()
+      const keyword = this.sectionQuery.keyword.toLowerCase()
+      return this.mediaLibrary.filter(item => {
+        if (this.sectionQuery.project && item.project !== this.sectionQuery.project) return false
+        if (this.sectionQuery.profession && item.profession !== this.sectionQuery.profession) return false
+        if (this.sectionQuery.outline && item.outline !== this.sectionQuery.outline) return false
+        if (this.sectionQuery.subject && item.subject !== this.sectionQuery.subject) return false
+        if (id && String(item.id) !== id) return false
+        if (keyword && !`${item.name} ${item.vid}`.toLowerCase().includes(keyword)) return false
+        return true
+      })
     }
   },
-  created () {
-    this.savedRows = loadSaved()
-    this.ensureSeed()
-    this.loadCurrent()
-  },
   methods: {
-    productName (id) {
-      const hit = allOperationProducts.find(item => item.id === id)
-      return hit ? hit.name : ''
+    edit (row) {
+      this.current = row || null
+      this.draft = row ? { name: row.name, project: row.project, profession: row.profession } : { name: '引流课', project: '中级职称', profession: '' }
+      this.editDialog = true
     },
-    filledListCount (list) {
-      return (list || []).filter(item => item.productId).length
+    saveEdit () {
+      if (!this.draft.name || !this.draft.profession) return this.$message.warning('请填写名称和专业')
+      if (this.current) Object.assign(this.current, this.draft)
+      else this.rows.unshift({ ...this.draft, status: 'OFF', contents: [] })
+      this.editDialog = false
+      this.$message.success('引流课已保存')
     },
-    ensureSeed () {
-      if (this.savedRows.length) return
-      const featured = allOperationProducts.find(item => item.name === '2026昭师进阶班（技能免考）')
-      this.savedRows = [{
-        project: '临床',
-        profession: '临床助理医师',
-        banner: { productId: featured ? featured.id : '', trialId: '' },
-        list: [blankListRow()]
-      }]
-      this.persist()
+    copyRow (row) {
+      this.rows.unshift({
+        ...JSON.parse(JSON.stringify(row)),
+        name: `${row.name}（副本）`,
+        status: 'OFF'
+      })
+      this.$message.success('已复制，默认禁用，可再编辑')
     },
-    onProjectChange () {
-      this.profession = this.professionOptions[0] || ''
-      this.loadCurrent()
-    },
-    loadCurrent () {
-      const found = this.savedRows.find(item => item.project === this.project && item.profession === this.profession)
-      this.banner = found ? { productId: found.banner.productId || '', trialId: found.banner.trialId || '' } : { productId: '', trialId: '' }
-      const list = found && found.list && found.list.length ? found.list : [blankListRow()]
-      this.listRows = list.map(item => ({ ...blankListRow(), productId: item.productId || '', trialId: item.trialId || '' }))
-    },
-    openSaved (row) {
-      this.project = row.project
-      this.profession = row.profession
-      this.loadCurrent()
-    },
-    addListRow () { this.listRows.push(blankListRow()) },
-    removeListRow (index) { this.listRows.splice(index, 1) },
-    persist () {
-      window.localStorage.setItem(storageKey, JSON.stringify(this.savedRows))
-    },
-    save () {
-      if (!this.project || !this.profession) return this.$message.warning('请先选择项目和专业')
-      if (!this.banner.productId) return this.$message.warning('请先为头图免费试听选择商品')
-      this.$confirm(
-        `将保存「${this.project} ${this.profession}」的头图免费试听和 ${this.filledListCount(this.listRows)} 条列表试听。试听内容选项待对接，不写入未确认的小节 ID。`,
-        '确认保存引流课',
-        { confirmButtonText: '确认保存', cancelButtonText: '返回检查', type: 'warning' }
-      ).then(() => {
-        this.saving = true
-        window.setTimeout(() => {
-          const payload = {
-            project: this.project,
-            profession: this.profession,
-            banner: { ...this.banner },
-            list: this.listRows.map(item => ({ productId: item.productId, trialId: item.trialId }))
-          }
-          const index = this.savedRows.findIndex(item => item.project === this.project && item.profession === this.profession)
-          if (index >= 0) this.savedRows.splice(index, 1, payload)
-          else this.savedRows.unshift(payload)
-          this.persist()
-          this.saving = false
-          this.$message.success('引流课配置已保存')
-        }, 350)
+    removeRow (row) {
+      this.$confirm(`删除「${row.name}」后，配置内容和已关联小节一并去掉。`, '确认删除', { type: 'warning' }).then(() => {
+        this.rows = this.rows.filter(item => item !== row)
+        this.$message.success('已删除')
       }).catch(() => {})
+    },
+    openContents (row) {
+      this.current = row
+      this.contentDialog = true
+    },
+    openSectionPicker (row) {
+      this.linking = row
+      this.pickedMedia = null
+      this.pickedId = row.sectionId || ''
+      this.sectionDialog = true
+    },
+    searchSections () { this.$message.success(`当前可关联 ${this.filteredMedia.length} 条已有音视频`) },
+    resetSectionQuery () {
+      this.sectionQuery = { mediaId: '', keyword: '', project: '中级职称', profession: '内分泌主治(309)', pack: '', outline: '', subject: '' }
+    },
+    bindSection () {
+      const media = this.mediaLibrary.find(item => item.id === this.pickedId) || this.pickedMedia
+      if (!media) return this.$message.warning('请先选中一条音视频')
+      Object.assign(this.linking, {
+        sectionId: media.id,
+        sectionName: media.name,
+        vid: media.vid,
+        updatedAt: '刚刚'
+      })
+      this.sectionDialog = false
+      this.$message.success(`已关联小节 ${media.id} ${media.name}`)
     }
   }
 }
 </script>
 
 <style scoped>
-.trial-page{max-width:1280px;margin:0 auto}
+.page{max-width:1440px;margin:0 auto}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
 .breadcrumb{margin-bottom:10px;color:#8a919e;font-size:12px}
-.breadcrumb span{color:#5f6876}
 .breadcrumb i{margin:0 7px}
 .intro-banner{margin:16px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#166350;line-height:1.7}
-.workspace-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:18px;align-items:start}
-.config-panel,.side-column{border:1px solid var(--line);border-radius:10px;background:#fff}
-.config-panel{padding:22px 24px}
-.side-column{padding:16px}
-.field-block{margin-bottom:26px;padding-bottom:20px;border-bottom:1px dashed var(--line)}
-.field-block.last{margin-bottom:0;padding-bottom:0;border-bottom:0}
-.field-label{margin-bottom:6px;font-weight:700}
-.field-hint{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.6}
-.scope-row,.trial-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
-.scope-row .el-select,.trial-row .el-select{flex:1;min-width:180px}
-.scope-chip{flex:0 0 auto;padding:7px 10px;border-radius:8px;background:#f7f8fa;color:#303744;font-size:12px;white-space:nowrap}
-.add-row{margin-top:8px;padding:0}
-.remove-row{padding:0;color:#8f1018}
-.side-label{margin:0 0 10px;color:var(--muted);font-size:12px;font-weight:700}
-@media(max-width:980px){
-  .page-head{align-items:flex-start;flex-direction:column}
-  .workspace-grid{grid-template-columns:1fr}
-}
+.filters{display:flex;gap:12px;margin:0 0 16px}
+.filters .el-select{width:220px}
+.danger{color:#8f1018}
+.section-cell{display:flex;flex-direction:column;gap:2px;line-height:1.4}
+.section-cell small,.vid,.muted{color:var(--muted);font-size:12px;word-break:break-all}
+.section-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.section-filters .el-input,.section-filters .el-select{width:160px}
 </style>
