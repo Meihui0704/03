@@ -91,7 +91,7 @@
 
     <template v-if="view === 'quality'">
       <div class="section-head"><div><h2>信息待补充</h2><p>只收集上架数据中名称为空或所属项目为空的记录。已确认的层级不在这里改 ID。</p></div></div>
-      <el-alert title="「大一～大四」已按确认放到中医/中西医 → 期末考试（中医）的学期子级。原表里所属项目为空的同名记录仍留在本页，不擅自改它们的专业 ID。" type="warning" :closable="false" show-icon />
+      <el-alert title="「大一～大四」以及原表里同名的期末行，已按确认挂到中医/中西医 → 期末考试（中医）下面。专业 ID 全部沿用原表；大一还没有真实 ID，子级里仍标待对接。本页只留还没确认归属的记录。" type="warning" :closable="false" show-icon />
       <div class="data-table spaced"><el-table :data="incompleteProfessions" row-key="id">
         <el-table-column prop="id" label="专业 ID" width="110" /><el-table-column prop="name" label="专业名称" min-width="180" /><el-table-column prop="project" label="所属项目" min-width="160" />
         <el-table-column label="缺少内容" min-width="180"><template slot-scope="s"><span class="status warn">{{ s.row.life }}</span></template></el-table-column>
@@ -137,7 +137,7 @@
     </el-dialog>
 
     <el-drawer title="子级管理" :visible.sync="childVisible" size="720px" append-to-body :wrapper-closable="true">
-      <div v-if="childParent" class="drawer-content"><div class="parent-context"><span>所属专业</span><strong>{{ childParent.name }}</strong><small>专业 ID {{ childParent.id }} · {{ childParent.project }}<template v-if="childParent.id === 349"> · 学期子级：大一到大四</template></small></div>
+      <div v-if="childParent" class="drawer-content"><div class="parent-context"><span>所属专业</span><strong>{{ childParent.name }}</strong><small>专业 ID {{ childParent.id }} · {{ childParent.project }}<template v-if="childParent.id === 349"> · 学期子级挂在中医下面；同名多行是原表重复 ID，未合并</template></small></div>
         <div class="child-tools"><el-radio-group v-model="childFilter" size="small"><el-radio-button label="ALL">全部 {{ childRows.length }}</el-radio-button><el-radio-button label="on">上架 {{ childOnCount }}</el-radio-button><el-radio-button label="off">已下架 {{ childRows.length - childOnCount }}</el-radio-button></el-radio-group><el-button type="primary" size="small" @click="openChildEditor()">新增子级</el-button></div>
         <el-alert v-if="childFilter !== 'ALL'" title="切换到“全部”后可调整子级顺序" type="info" :closable="false" show-icon class="child-filter-tip" />
         <el-table :data="visibleChildren" row-key="id" empty-text="暂无子级"><el-table-column label="子级 ID" width="110"><template slot-scope="s">{{ displayChildId(s.row.id) }}</template></el-table-column><el-table-column prop="name" label="子级名称" min-width="230" /><el-table-column label="排序" width="120"><template slot-scope="s"><strong class="sort-no">{{ s.row.sort }}</strong><el-button type="text" :disabled="childFilter !== 'ALL' || s.$index === 0" aria-label="上移" @click="moveChild(s.row, -1)">↑</el-button><el-button type="text" :disabled="childFilter !== 'ALL' || s.$index === visibleChildren.length - 1" aria-label="下移" @click="moveChild(s.row, 1)">↓</el-button></template></el-table-column><el-table-column label="状态" width="100"><template slot-scope="s"><span class="status" :class="s.row.status">{{ s.row.status === 'on' ? '上架' : '已下架' }}</span></template></el-table-column><el-table-column label="操作" width="170"><template slot-scope="s"><el-button type="text" @click="openChildEditor(s.row)">编辑</el-button><el-button type="text" @click="toggleChild(s.row)">{{ s.row.status === 'on' ? '下架' : '上架' }}</el-button><el-button type="text" class="danger-text" @click="deleteChild(s.row)">删除</el-button></template></el-table-column></el-table>
@@ -177,12 +177,13 @@ export default {
   computed: {
     activeProjects () { return this.projects.filter(item => item.status === 'on').sort((a, b) => a.sort - b.sort || a.id - b.id) },
     visibleProjects () { const q = this.projectKeyword.toLowerCase(); return this.activeProjects.filter(item => !q || `${item.id} ${item.name}`.toLowerCase().includes(q)) },
-    activeProfessions () { return this.professions.filter(item => item.status === 'on') },
-    incompleteProfessions () { return this.activeProfessions.filter(item => item.life.includes('为空')) },
+    activeProfessions () { return this.professions.filter(item => item.status === 'on' && !item.nestedParent) },
+    incompleteProfessions () { return this.professions.filter(item => item.status === 'on' && !item.nestedParent && (item.life || '').includes('为空')) },
     visibleProfessions () {
       if (!this.professionProject) return []
       const q = this.professionKeyword.toLowerCase()
       return this.professions.filter(item => {
+        if (item.nestedParent) return false
         if (item.project !== this.professionProject) return false
         if (this.professionStatus !== 'all' && item.status !== this.professionStatus) return false
         if (item.life && item.life.includes('为空')) return false
@@ -192,7 +193,7 @@ export default {
     professionProjects () { return Array.from(new Set(this.professions.map(item => item.project).filter(item => item && item !== '—'))).sort((a, b) => a.localeCompare(b, 'zh-CN')) },
     projectMap () {
       return this.activeProjects.map(project => {
-        const rows = this.professions.filter(item => item.project === project.name && !(item.life || '').includes('为空'))
+        const rows = this.professions.filter(item => item.project === project.name && !item.nestedParent && !(item.life || '').includes('为空'))
         return {
           name: project.name,
           sort: project.sort,
@@ -202,7 +203,7 @@ export default {
       })
     },
     projectProfessionCounts () {
-      const rows = this.professions.filter(item => item.project === this.professionProject && !(item.life || '').includes('为空'))
+      const rows = this.professions.filter(item => item.project === this.professionProject && !item.nestedParent && !(item.life || '').includes('为空'))
       return { on: rows.filter(item => item.status === 'on').length, off: rows.filter(item => item.status === 'off').length, all: rows.length }
     },
     visibleArchived () { const q = this.historyKeyword.toLowerCase(); return this.archived.filter(item => !q || `${item.kind} ${item.id} ${item.name}`.toLowerCase().includes(q)).map(item => ({ ...item, archiveKey: `${item.kind}-${item.id}` })) },
@@ -224,9 +225,9 @@ export default {
   },
   methods: {
     noop () {},
-    loadState () { try { const saved = JSON.parse(localStorage.getItem('project-management-demo-v1')); this.projects = saved.projects || copy(backendProjects); this.professions = saved.professions || copy(backendProfessions); this.archived = saved.archived || []; this.children = saved.children || copy(defaultChildren) } catch (error) { this.projects = copy(backendProjects); this.professions = copy(backendProfessions); this.archived = []; this.children = copy(defaultChildren) } Object.keys(defaultChildren).forEach(id => { if (!this.children[id] || !this.children[id].length) this.$set(this.children, id, copy(defaultChildren[id])) }) },
+    loadState () { try { const saved = JSON.parse(localStorage.getItem('project-management-demo-v2')); this.projects = saved.projects || copy(backendProjects); this.professions = saved.professions || copy(backendProfessions); this.archived = saved.archived || []; this.children = saved.children || copy(defaultChildren) } catch (error) { this.projects = copy(backendProjects); this.professions = copy(backendProfessions); this.archived = []; this.children = copy(defaultChildren) } Object.keys(defaultChildren).forEach(id => { if (!this.children[id] || !this.children[id].length) this.$set(this.children, id, copy(defaultChildren[id])) }) },
     displayChildId (id) { return typeof id === 'number' ? id : '待对接' },
-    persist () { localStorage.setItem('project-management-demo-v1', JSON.stringify({ projects: this.projects, professions: this.professions, archived: this.archived, children: this.children })) },
+    persist () { localStorage.setItem('project-management-demo-v2', JSON.stringify({ projects: this.projects, professions: this.professions, archived: this.archived, children: this.children })) },
     openProjectEditor (item) { this.projectEditingId = item ? item.id : null; this.projectForm = item ? { name: item.name, sort: item.sort, status: item.status } : { name: '', sort: this.activeProjects.length + 1, status: 'on' }; this.projectEditorVisible = true },
     saveProject () { if (!this.projectForm.name || !this.projectForm.sort) return this.$message.warning('请完整填写项目名称和排序'); if (this.projectForm.name === '公共预防') return this.$message.warning('“公共预防”已停用，请使用“公卫预防”'); let item = this.projects.find(row => row.id === this.projectEditingId); if (item) Object.assign(item, this.projectForm); else { item = { ...this.projectForm, id: Math.max(1000, ...this.projects.map(row => row.id + 1)) }; this.projects.push(item) } this.syncArchive('项目', item); this.persist(); this.projectEditorVisible = false; this.showToast(item.status === 'off' ? '项目已保存并移入“已下架”' : '项目已保存（仅当前演示）') },
     selectProfessionProject (name) { this.professionProject = this.professionProject === name ? '' : name; this.professionKeyword = '' },

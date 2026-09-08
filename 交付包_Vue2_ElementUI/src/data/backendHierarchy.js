@@ -29,13 +29,27 @@ export const backendProjects = [
 
 const sourceProfessions = typeof window === 'undefined' ? [] : (window.professionData || [])
 
-export const backendProfessions = sourceProfessions.map(item => ({
-  ...item,
-  sort: item.sort || item.no,
-  pinyin: item.pinyin || '',
-  year: '未标年份',
-  life: item.name === '—' && item.project === '—' ? '名称和项目为空' : item.project === '—' ? '所属项目为空' : '正在使用'
-}))
+/** 运营已确认：挂在「中医/中西医 → 期末考试（中医）」下的学期子级；专业 ID 沿用原表，不新造。 */
+export const tcmFinalExamChildIds = [352, 351, 353, 278, 283, 277, 282, 279, 284, 235, 243]
+
+export const backendProfessions = sourceProfessions.map(item => {
+  const nestedUnderTcmFinal = tcmFinalExamChildIds.includes(item.id)
+  return {
+    ...item,
+    nestedParent: nestedUnderTcmFinal ? 349 : null,
+    project: nestedUnderTcmFinal ? '中医/中西医' : item.project,
+    sort: item.sort || item.no,
+    pinyin: item.pinyin || '',
+    year: '未标年份',
+    life: nestedUnderTcmFinal
+      ? '学期子级'
+      : item.name === '—' && item.project === '—'
+        ? '名称和项目为空'
+        : item.project === '—'
+          ? '所属项目为空'
+          : '正在使用'
+  }
+})
 
 export const defaultChildren = {
   258: [
@@ -49,8 +63,16 @@ export const defaultChildren = {
   ],
   349: [
     { id: 'pending-349-1', name: '大一', sort: 1, status: 'on' },
-    { id: 'pending-349-2', name: '大二', sort: 2, status: 'on' },
-    { id: 'pending-349-3', name: '大三', sort: 3, status: 'on' },
-    { id: 'pending-349-4', name: '大四', sort: 4, status: 'on' }
+    { id: 352, name: '大二', sort: 2, status: 'on' },
+    { id: 351, name: '大三', sort: 3, status: 'on' },
+    { id: 353, name: '大四', sort: 4, status: 'on' },
+    { id: 278, name: '大二期末', sort: 5, status: 'on' },
+    { id: 283, name: '大二期末', sort: 6, status: 'on' },
+    { id: 277, name: '大三期末', sort: 7, status: 'on' },
+    { id: 282, name: '大三期末', sort: 8, status: 'on' },
+    { id: 279, name: '大四期末', sort: 9, status: 'on' },
+    { id: 284, name: '大四期末', sort: 10, status: 'on' },
+    { id: 235, name: '大二', sort: 11, status: 'on' },
+    { id: 243, name: '大二', sort: 12, status: 'on' }
   ]
 }
