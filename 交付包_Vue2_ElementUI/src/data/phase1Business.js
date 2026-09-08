@@ -54,7 +54,7 @@ const clinicalRaw = [
   {
     owner: 'shared', ownerLabel: '临床执业医师／临床助理医师共用商品', ownerShort: '共用', scope: ['临床执业医师', '临床助理医师'],
     categories: {
-      '笔试／冲刺': [['2026昭师金题带刷冲刺班', 1280], ['2026考前速效抢救班（券后价）', 1480], ['2026五天四夜仿真模考视频代课面授班', 2990], ['2026五天四夜仿真模考面授班（券后价）', 4570], ['2026八天七夜冲刺串讲视频代课面授班', 2990]],
+      '笔试／冲刺': [['4天三夜密训班', null, '460'], ['2026昭师金题带刷冲刺班', 1280], ['2026考前速效抢救班（券后价）', 1480], ['2026五天四夜仿真模考视频代课面授班', 2990], ['2026五天四夜仿真模考面授班（券后价）', 4570], ['2026八天七夜冲刺串讲视频代课面授班', 2990]],
       高端面授: [['2026昭师进阶班（技能免考）', 8330], ['2026昭师尊享B班（技能免考）', 12470]],
       网络班次: [['2026全程精讲班（技能免考，券后价）', 2300], ['2026昭师助力班（技能免考，券后价）', 3680], ['2027全程精讲班（券后价）', 2300], ['2027早鸟班（券后价）', 2730], ['2027昭师助力班（券后价）', 3680], ['2027昭师带学A班（券后价）', 5830]],
       小昭医声: [['2027心／肺技能听诊', 9.9]],
@@ -88,18 +88,24 @@ export const clinicalGroups = clinicalRaw.map(block => ({
   scope: block.scope,
   categories: Object.keys(block.categories).map(category => ({
     name: category,
-    products: block.categories[category].map(([name, price]) => ({
-      id: `clinical-${String(clinicalSerial++).padStart(3, '0')}`,
-      name,
-      price,
-      project: '临床',
-      category,
-      owner: block.owner,
-      ownerLabel: block.ownerShort,
-      scope: block.scope.slice(),
-      status: clinicalSerial % 5 === 0 ? 'OFF' : 'ON',
-      source: '临床商品库'
-    }))
+    products: block.categories[category].map(entry => {
+      const name = entry[0]
+      const price = entry[1]
+      const backendId = entry[2] ? String(entry[2]) : ''
+      const id = backendId || `clinical-${String(clinicalSerial++).padStart(3, '0')}`
+      return {
+        id,
+        name,
+        price,
+        project: '临床',
+        category,
+        owner: block.owner,
+        ownerLabel: block.ownerShort,
+        scope: block.scope.slice(),
+        status: !backendId && clinicalSerial % 5 === 0 ? 'OFF' : 'ON',
+        source: '临床商品库'
+      }
+    })
   }))
 }))
 
@@ -108,6 +114,13 @@ export const clinicalProducts = clinicalGroups.reduce((items, block) => {
 }, [])
 
 export const allOperationProducts = middleTitleProducts.concat(clinicalProducts)
+
+export function matchesProductKeyword (item, term) {
+  if (!term) return true
+  const query = String(term).trim().toLowerCase()
+  if (!query) return true
+  return `${item.name} ${item.id}`.toLowerCase().includes(query)
+}
 
 export function professionName (id) {
   return id.indexOf('::') > -1 ? id.slice(id.indexOf('::') + 2) : id

@@ -52,7 +52,7 @@
       <div>
         <div class="breadcrumb"><span>运营管理</span><i class="el-icon-arrow-right" />App优惠券管理</div>
         <h1 class="page-title">App优惠券管理</h1>
-        <p class="page-description">先选班型商品，再按项目和科室批量勾选专业，一次性生成实际生效的「商品 × 专业」优惠券。</p>
+        <p class="page-description">先按商品 ID 或班型名找到课，再按项目和科室批量勾选专业，一次性生成实际生效的「商品 × 专业」优惠券。</p>
       </div>
       <div class="head-actions">
         <el-button @click="view = 'list'">返回任务列表</el-button>
@@ -71,8 +71,8 @@
 
     <aside class="intro-banner" aria-label="当前改造说明">
       <p><strong>当前痛点</strong>人工给中级职称约 39 个专业逐条取名、勾选、分配优惠券，实测要 2–3 小时，专业数还会继续增加。</p>
-      <p><strong>这次怎么做</strong>先从可搜索的商品列表选定班型，再按科室分组一键勾选专业，一次性生成全部优惠券。</p>
-      <p><strong>演示任务</strong>勾选「2027年中级职称精英班」，再展开「中级职称」全选内科类——「中医内科」会标红，因为该商品不覆盖此专业。</p>
+      <p><strong>这次怎么做</strong>用商品 ID 锁定班型（实操如 ID 460「4天三夜密训班」只覆盖临床执业、助理两个专业）。批量优势要靠中级职称这种多专业一次勾选才能看出来。</p>
+      <p><strong>演示任务</strong>默认勾「2027年中级职称精英班」，展开「中级职称」全选内科类。不要用只有两个专业的临床班型当主演示。</p>
     </aside>
 
     <div class="workspace-grid">
@@ -136,7 +136,7 @@
         <div class="field-row">
           <div class="field-label"><span class="req">*</span>所属课程（班型商品）</div>
           <div class="course-toolbar">
-            <el-input v-model.trim="courseKeyword" clearable prefix-icon="el-icon-search" placeholder="搜索班型商品，如「精英班」「早鸟」…" />
+            <el-input v-model.trim="courseKeyword" clearable prefix-icon="el-icon-search" placeholder="搜索商品 ID 或班型名，如 460、密训班、精英班" />
             <el-button type="primary" @click="showAddCourse = !showAddCourse">＋ 新增商品</el-button>
           </div>
           <div v-if="showAddCourse" class="add-course">
@@ -161,7 +161,7 @@
                 @click="toggleCourse(course.id)"
               >
                 <span class="box" :aria-hidden="true" />
-                <span class="course-name">{{ course.name }}</span>
+                <span class="course-name"><small class="course-id">ID {{ course.id }}</small>{{ course.name }}</span>
                 <span class="course-tag">{{ course.price == null ? '未标价' : `售价 ${course.price} 元` }} · 覆盖 {{ course.scope.length }} 个专业</span>
                 <span class="remove" title="移除该商品" @click.stop="removeCourse(course)">✕</span>
               </button>
@@ -170,12 +170,12 @@
           </div>
           <div v-if="selectedCourses.length" class="selected-chips">
             <span v-for="course in selectedCourses" :key="course.id" class="chip" :class="{ unsafe: isUnsafeCourse(course), zero: isZeroCourse(course) }">
-              {{ course.name }}
+              ID {{ course.id }} {{ course.name }}
               <small>{{ coursePriceHint(course) }}</small>
               <button type="button" aria-label="取消该商品" @click="toggleCourse(course.id)">×</button>
             </span>
           </div>
-          <p class="field-note">商品列表支持搜索定位和多选。优惠券实际作用于「已选课程 × 已选专业」的组合。</p>
+          <p class="field-note">用商品 ID 或班型名搜索。临床两个专业也能配，但要看批量省时请用中级职称一次勾选。</p>
         </div>
 
         <div class="field-row">
@@ -289,7 +289,7 @@
 </template>
 
 <script>
-import { allOperationProducts, getImpact, professionProject, readTransfer, taxonomy, zzzcScope } from '../data/phase1Business'
+import { allOperationProducts, getImpact, matchesProductKeyword, professionProject, readTransfer, taxonomy, zzzcScope } from '../data/phase1Business'
 
 const eliteName = '2027年中级职称精英班'
 const issuedKey = 'coupon-tasks-demo-v1'
@@ -387,7 +387,7 @@ export default {
           groups.push(group)
         }
         group.total += 1
-        if (!term || item.name.toLowerCase().includes(term)) group.items.push(item)
+        if (!term || matchesProductKeyword(item, term)) group.items.push(item)
       })
       return groups.filter(group => group.items.length)
     },
@@ -681,7 +681,7 @@ export default {
 .coupon-list .empty{padding:40px 20px;color:var(--muted);text-align:center}
 .danger-text{color:#c9232d}
 .head-actions{display:flex;flex-wrap:wrap;gap:8px}
-.coupon-workspace{max-width:1180px;margin:0 auto}.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.breadcrumb{margin-bottom:10px;color:#8a919e;font-size:12px}.breadcrumb span{color:#5f6876}.breadcrumb i{margin:0 7px}.transfer-alert{margin-top:16px}.intro-banner{margin:16px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff}.intro-banner p{display:grid;grid-template-columns:78px 1fr;gap:10px;margin:0 0 6px;color:var(--muted);line-height:1.7}.intro-banner p:last-child{margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line);color:#166350}.intro-banner strong{color:var(--ink)}.workspace-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:18px;align-items:start}.config-panel,.log-panel{padding:22px 24px;border:1px solid var(--line);border-radius:10px;background:#fff}.panel-title{margin-bottom:18px;font-size:14px;font-weight:700}.field-row{margin-bottom:20px}.field-label{display:block;margin-bottom:8px;font-weight:600}.req{margin-right:3px;color:#c91420}.mode-toggle{display:flex;gap:8px;margin-bottom:10px}.mode-btn{flex:1;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);font-weight:700;cursor:pointer}.mode-btn.active{border-color:var(--brand);background:var(--brand-soft);color:#a90a13}.rule-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--muted)}.rule-line .el-input-number{width:120px}.course-toolbar{display:flex;gap:8px;margin-bottom:8px}.course-toolbar .el-input{flex:1}.add-course{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;padding:12px;border:1px dashed #eba5aa;border-radius:8px;background:#fff8f8}.add-hint{margin:0;color:#a90a13;font-size:12px}.add-actions{display:flex;justify-content:flex-end;gap:8px}.course-list{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#fff}.course-group-header{position:sticky;top:0;padding:6px 12px;border-bottom:1px solid var(--line);background:#fafafa;color:var(--muted);font-size:11px;font-weight:700}.course-row{display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px;border:0;border-bottom:1px solid #f0f0f0;background:#fff;text-align:left;cursor:pointer}.course-row:last-child{border-bottom:0}.course-row:hover{background:#fafafa}.course-row.checked{background:var(--brand-soft)}.box{width:14px;height:14px;flex-shrink:0;border:1px solid #c5cbd3;border-radius:3px;background:#fff}.course-row.checked .box{border-color:var(--brand);background:var(--brand);box-shadow:inset 0 0 0 2px #fff}.course-name{flex:1}.course-tag{flex-shrink:0;padding:1px 7px;border-radius:8px;background:#f0f0f0;color:var(--muted);font-size:10px}.remove{display:none;width:18px;height:18px;border-radius:50%;background:#edeef0;color:var(--muted);font-size:11px;line-height:18px;text-align:center}.course-row:hover .remove{display:inline-block}.remove:hover{background:var(--brand);color:#fff}.course-empty{padding:16px;color:var(--muted);text-align:center}.selected-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.price-alert{margin-top:10px}
+.coupon-workspace{max-width:1180px;margin:0 auto}.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.breadcrumb{margin-bottom:10px;color:#8a919e;font-size:12px}.breadcrumb span{color:#5f6876}.breadcrumb i{margin:0 7px}.transfer-alert{margin-top:16px}.intro-banner{margin:16px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff}.intro-banner p{display:grid;grid-template-columns:88px 1fr;gap:10px;margin:0 0 6px;color:var(--muted);line-height:1.7}.intro-banner p:last-child{margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line);color:#166350}.intro-banner strong{color:var(--ink)}.workspace-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:18px;align-items:start}.config-panel,.log-panel{padding:22px 24px;border:1px solid var(--line);border-radius:10px;background:#fff}.panel-title{margin-bottom:18px;font-size:14px;font-weight:700}.field-row{margin-bottom:20px}.field-label{display:block;margin-bottom:8px;font-weight:600}.req{margin-right:3px;color:#c91420}.mode-toggle{display:flex;gap:8px;margin-bottom:10px}.mode-btn{flex:1;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);font-weight:700;cursor:pointer}.mode-btn.active{border-color:var(--brand);background:var(--brand-soft);color:#a90a13}.rule-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--muted)}.rule-line .el-input-number{width:120px}.course-toolbar{display:flex;gap:8px;margin-bottom:8px}.course-toolbar .el-input{flex:1}.add-course{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;padding:12px;border:1px dashed #eba5aa;border-radius:8px;background:#fff8f8}.add-hint{margin:0;color:#a90a13;font-size:12px}.add-actions{display:flex;justify-content:flex-end;gap:8px}.course-list{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#fff}.course-group-header{position:sticky;top:0;padding:6px 12px;border-bottom:1px solid var(--line);background:#fafafa;color:var(--muted);font-size:11px;font-weight:700}.course-row{display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px;border:0;border-bottom:1px solid #f0f0f0;background:#fff;text-align:left;cursor:pointer}.course-row:last-child{border-bottom:0}.course-row:hover{background:#fafafa}.course-row.checked{background:var(--brand-soft)}.box{width:14px;height:14px;flex-shrink:0;border:1px solid #c5cbd3;border-radius:3px;background:#fff}.course-row.checked .box{border-color:var(--brand);background:var(--brand);box-shadow:inset 0 0 0 2px #fff}.course-name{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.course-id{color:#8a919e;font-size:11px;font-weight:700}.course-tag{flex-shrink:0;padding:1px 7px;border-radius:8px;background:#f0f0f0;color:var(--muted);font-size:10px}.remove{display:none;width:18px;height:18px;border-radius:50%;background:#edeef0;color:var(--muted);font-size:11px;line-height:18px;text-align:center}.course-row:hover .remove{display:inline-block}.remove:hover{background:var(--brand);color:#fff}.course-empty{padding:16px;color:var(--muted);text-align:center}.selected-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.price-alert{margin-top:10px}
 .price-preview{margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;background:#fafafa}
 .price-preview-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--ink);font-size:12px;font-weight:700}
 .price-preview-head span{padding:1px 6px;border-radius:4px;background:#fbf3e2;color:#8a6418;font-size:10px;font-weight:700}
