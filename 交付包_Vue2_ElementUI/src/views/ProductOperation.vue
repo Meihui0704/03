@@ -9,57 +9,81 @@
       <el-button @click="$router.push('/business-lines')">从全部项目清单选择</el-button>
     </header>
 
-    <el-alert v-if="transfer.source" class="transfer-alert" type="success" show-icon :closable="false" :title="`已从${transfer.source}带入 ${selectedProductIds.length} 个商品、${professionIds.length} 个专业`" />
+    <el-alert
+      v-if="transfer.source"
+      class="transfer-alert"
+      type="success"
+      show-icon
+      :closable="false"
+      :title="`已从${transfer.source}带入 ${selectedProductIds.length} 个商品、${professionIds.length} 个专业`"
+    />
 
-    <div class="step-shell">
-      <el-steps :active="step" finish-status="success" simple>
-        <el-step :title="mode === 'shelf' ? '选择操作' : '调价方式'" />
-        <el-step title="选择商品" />
-        <el-step title="选择范围" />
-        <el-step title="确认生效" />
-      </el-steps>
-    </div>
+    <aside class="intro-banner">
+      <p>同一班型给一批专业执行同一操作。规则填一次，专业按科室一键勾选，系统按「商品 × 专业」生成实际记录，不必每个专业再走一遍。</p>
+    </aside>
 
-    <div class="form-surface">
-      <section v-show="step === 0" class="step-content compact-step">
-        <div class="step-heading"><span>1</span><div><h2>{{ mode === 'shelf' ? '选择上架或下架' : '设置统一调价规则' }}</h2><p>一次任务只能执行一种操作，避免同批次规则互相覆盖。</p></div></div>
-        <template v-if="mode === 'shelf'">
-          <el-radio-group v-model="shelfAction" class="choice-grid">
-            <el-radio-button label="ON"><strong>批量上架</strong><small>使有效组合在指定时间可售</small></el-radio-button>
-            <el-radio-button label="OFF"><strong>批量下架</strong><small>使有效组合在指定时间停止销售</small></el-radio-button>
-          </el-radio-group>
-        </template>
-        <template v-else>
-          <el-radio-group v-model="priceMode" class="choice-grid price-choice">
-            <el-radio-button label="REDUCE"><strong>减免固定金额</strong><small>在当前价格基础上统一减免</small></el-radio-button>
-            <el-radio-button label="PERCENT"><strong>按比例下调</strong><small>按照百分比统一下调</small></el-radio-button>
-            <el-radio-button label="FIXED"><strong>设置统一价格</strong><small>所有有效组合改为同一价格</small></el-radio-button>
-          </el-radio-group>
-          <div class="number-setting">
-            <span v-if="priceMode === 'REDUCE'">每个组合减免</span><span v-else-if="priceMode === 'PERCENT'">当前价格下调</span><span v-else>统一设置为</span>
-            <el-input-number v-model="priceValue" :min="priceMode === 'PERCENT' ? 1 : 0" :max="priceMode === 'PERCENT' ? 99 : 99999" :precision="priceMode === 'PERCENT' ? 0 : 2" controls-position="right" />
-            <span>{{ priceMode === 'PERCENT' ? '%' : '元' }}</span>
-          </div>
-        </template>
-      </section>
+    <div class="workspace-grid">
+      <div class="config-panel">
+        <section class="field-block">
+          <div class="field-label">{{ mode === 'shelf' ? '本次操作' : '调价规则' }}</div>
+          <p class="field-hint">一次任务只执行一种操作，避免同批次规则互相覆盖。</p>
+          <template v-if="mode === 'shelf'">
+            <el-radio-group v-model="shelfAction" class="choice-grid">
+              <el-radio-button label="ON"><strong>批量上架</strong><small>有效组合在指定时间可售</small></el-radio-button>
+              <el-radio-button label="OFF"><strong>批量下架</strong><small>有效组合在指定时间停售</small></el-radio-button>
+            </el-radio-group>
+          </template>
+          <template v-else>
+            <el-radio-group v-model="priceMode" class="choice-grid price-choice">
+              <el-radio-button label="REDUCE"><strong>减免固定金额</strong><small>在当前售价上统一减</small></el-radio-button>
+              <el-radio-button label="PERCENT"><strong>按比例下调</strong><small>按百分比统一下调</small></el-radio-button>
+              <el-radio-button label="FIXED"><strong>设置统一价格</strong><small>有效组合改为同一价</small></el-radio-button>
+            </el-radio-group>
+            <div class="number-setting">
+              <span v-if="priceMode === 'REDUCE'">每个组合减免</span>
+              <span v-else-if="priceMode === 'PERCENT'">当前价格下调</span>
+              <span v-else>统一设置为</span>
+              <el-input-number
+                v-model="priceValue"
+                :min="priceMode === 'PERCENT' ? 1 : 0"
+                :max="priceMode === 'PERCENT' ? 99 : 99999"
+                :precision="priceMode === 'PERCENT' ? 0 : 2"
+                controls-position="right"
+              />
+              <span>{{ priceMode === 'PERCENT' ? '%' : '元' }}</span>
+            </div>
+          </template>
+        </section>
 
-      <section v-show="step === 1" class="step-content">
-        <div class="step-heading"><span>2</span><div><h2>选择商品课程</h2><p>可以整组选择、搜索，也可以新增课程库中尚未录入的商品。</p></div></div>
-        <ProductPicker ref="productPicker" v-model="selectedProductIds" @change="onProductChange" />
-      </section>
+        <section class="field-block">
+          <div class="field-label">班型商品</div>
+          <p class="field-hint">先选定班型。中级职称各专业往往是同一班型、内容不同，不必按专业重复挑课。</p>
+          <ProductPicker ref="productPicker" v-model="selectedProductIds" @change="onProductChange" />
+        </section>
 
-      <section v-show="step === 2" class="step-content">
-        <div class="step-heading"><span>3</span><div><h2>选择项目与专业</h2><p>商品覆盖不到的专业会即时标出，并在执行时自动跳过。</p></div></div>
-        <ProfessionTree v-model="professionIds" :selected-products="selectedProductObjects" />
-      </section>
+        <section class="field-block">
+          <div class="field-label">专业范围</div>
+          <p class="field-hint">展开项目后可按科室整组勾选。班型覆盖不到的专业会标出，执行时自动跳过。</p>
+          <ProfessionTree v-model="professionIds" :selected-products="selectedProductObjects" />
+        </section>
 
-      <section v-show="step === 3" class="step-content final-step">
-        <div class="step-heading"><span>4</span><div><h2>确认生效</h2><p>核对时间和实际影响范围后再提交。</p></div></div>
-        <el-form label-position="top" class="effective-form">
-          <el-form-item label="生效时间" required>
-            <el-date-picker v-model="effectiveAt" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" placeholder="选择生效时间" :picker-options="dateOptions" />
-          </el-form-item>
-        </el-form>
+        <section class="field-block">
+          <div class="field-label">生效时间</div>
+          <el-date-picker
+            v-model="effectiveAt"
+            type="datetime"
+            value-format="yyyy-MM-dd HH:mm:ss"
+            placeholder="选择生效时间"
+            :picker-options="dateOptions"
+          />
+        </section>
+
+        <el-button type="primary" class="save-btn" :loading="submitting" @click="submit">确认{{ mode === 'shelf' ? '执行' : '调价' }}</el-button>
+        <p class="save-note">已选 <b>{{ selectedProductIds.length }}</b> 个班型、<b>{{ professionIds.length }}</b> 个专业，实际将生效 <b>{{ impact.combinationCount }}</b> 个「商品 × 专业」组合。</p>
+      </div>
+
+      <aside class="side-column">
+        <p class="side-label">本次将生效</p>
         <ImpactSummary
           :impact="impact"
           :selected-product-count="selectedProductIds.length"
@@ -70,19 +94,14 @@
         />
         <div class="confirmation-list">
           <div><span>操作</span><strong>{{ actionLabel }}</strong></div>
-          <div><span>商品</span><strong>{{ selectedProductIds.length }} 个</strong></div>
+          <div><span>班型</span><strong>{{ selectedProductIds.length }} 个</strong></div>
           <div><span>专业</span><strong>{{ professionIds.length }} 个</strong></div>
-          <div><span>实际生效</span><strong>{{ impact.combinationCount }} 个商品 × 专业组合</strong></div>
+          <div><span>实际组合</span><strong>{{ impact.combinationCount }}</strong></div>
         </div>
+        <p class="side-label">变更记录</p>
         <OperationLog :logs="logs" />
-      </section>
+      </aside>
     </div>
-
-    <footer class="page-actions">
-      <el-button v-if="step > 0" @click="step--">上一步</el-button>
-      <el-button v-if="step < 3" type="primary" @click="next">下一步</el-button>
-      <el-button v-else type="primary" :loading="submitting" @click="submit">确认{{ mode === 'shelf' ? '执行' : '调价' }}</el-button>
-    </footer>
   </section>
 </template>
 
@@ -101,7 +120,6 @@ export default {
     const transfer = readTransfer()
     return {
       transfer,
-      step: 0,
       shelfAction: 'OFF',
       priceMode: 'REDUCE',
       priceValue: 980,
@@ -124,7 +142,11 @@ export default {
   },
   computed: {
     title () { return this.mode === 'shelf' ? '商品课程上下架' : '商品批量调价' },
-    description () { return this.mode === 'shelf' ? '选择商品和专业后，按实际覆盖组合执行批量上架或下架。' : '选择商品和专业后，按实际覆盖组合统一调整价格。' },
+    description () {
+      return this.mode === 'shelf'
+        ? '规则和班型填一次，专业按科室一键勾选，按实际覆盖组合批量上架或下架。'
+        : '规则和班型填一次，专业按科室一键勾选，按实际覆盖组合统一调价。'
+    },
     selectedProductObjects () { return this.productCache.filter(item => this.selectedProductIds.includes(item.id)) },
     impact () { return getImpact(this.selectedProductIds, this.professionIds, this.productCache) },
     actionLabel () {
@@ -137,11 +159,11 @@ export default {
     priceDetail () {
       if (this.mode !== 'price' || !this.selectedProductObjects.length) return ''
       const known = this.selectedProductObjects.filter(item => typeof item.price === 'number')
-      if (!known.length) return '所选课程未返回当前售价，提交前需由商品接口完成价格校验。'
+      if (!known.length) return '所选课程未返回当前售价，提交前需由商品接口完成价格校验。测算仅供参考。'
       const prices = known.map(item => this.previewPrice(item.price))
       const range = Math.min(...prices) === Math.max(...prices) ? `¥${Math.min(...prices)}` : `¥${Math.min(...prices)}–¥${Math.max(...prices)}`
       const missing = this.selectedProductObjects.length - known.length
-      return `已维护售价的 ${known.length} 个商品，调整后价格区间为 ${range}${missing ? `；另有 ${missing} 个商品未维护售价，本次只校验覆盖范围` : ''}。`
+      return `已维护售价的 ${known.length} 个商品，调整后价格区间为 ${range}（仅供参考）${missing ? `；另有 ${missing} 个商品未维护售价，本次只校验覆盖范围` : ''}。`
     }
   },
   methods: {
@@ -158,25 +180,29 @@ export default {
       const ids = this.impact.mismatched.map(item => item.professionId)
       this.professionIds = this.professionIds.filter(item => !ids.includes(item))
     },
-    next () {
-      if (this.step === 0 && this.mode === 'price' && this.priceValue <= 0) return this.$message.warning('请填写大于 0 的调价数值')
-      if (this.step === 1 && !this.selectedProductIds.length) return this.$message.warning('请先选择至少一个商品课程')
-      if (this.step === 2 && !this.professionIds.length) return this.$message.warning('请先选择至少一个专业')
-      if (this.step === 2 && !this.impact.combinationCount) return this.$message.error('已选专业均不在商品覆盖范围内，请调整后再继续')
-      this.step++
-    },
     submit () {
+      if (this.mode === 'price' && this.priceValue <= 0) return this.$message.warning('请填写大于 0 的调价数值')
+      if (!this.selectedProductIds.length) return this.$message.warning('请先选择至少一个班型商品')
+      if (!this.professionIds.length) return this.$message.warning('请先勾选至少一个专业')
+      if (!this.impact.combinationCount) return this.$message.error('已选专业均不在商品覆盖范围内，请调整后再保存')
       if (!this.effectiveAt) return this.$message.warning('请选择生效时间')
-      if (!this.impact.combinationCount) return this.$message.error('没有可生效的商品与专业组合')
       const mismatchText = this.impact.mismatched.length ? `；${this.impact.mismatched.length} 个不适用专业将被跳过` : ''
-      this.$confirm(`将对 ${this.impact.combinationCount} 个“商品 × 专业”组合执行${this.actionLabel}，生效时间为 ${this.effectiveAt}${mismatchText}。`, `确认${this.mode === 'shelf' ? '批量操作' : '批量调价'}`, { confirmButtonText: '确认执行', cancelButtonText: '返回检查', type: 'warning' }).then(() => {
+      this.$confirm(
+        `将对 ${this.impact.combinationCount} 个「商品 × 专业」组合执行${this.actionLabel}，生效时间为 ${this.effectiveAt}${mismatchText}。`,
+        `确认${this.mode === 'shelf' ? '批量操作' : '批量调价'}`,
+        { confirmButtonText: '确认执行', cancelButtonText: '返回检查', type: 'warning' }
+      ).then(() => {
         this.submitting = true
         window.setTimeout(() => {
           if (this.$refs.productPicker) {
             if (this.mode === 'shelf') this.$refs.productPicker.applyStatus(this.selectedProductIds, this.shelfAction)
             else this.$refs.productPicker.applyPrice(this.selectedProductIds, price => this.previewPrice(price))
           }
-          this.logs.unshift({ time: '刚刚', user: '运营-美惠', content: `${this.actionLabel}，实际影响 ${this.impact.combinationCount} 个组合；专业：${this.impact.valid.map(item => professionName(item.professionId)).join('、')}` })
+          this.logs.unshift({
+            time: '刚刚',
+            user: '运营-美惠',
+            content: `${this.actionLabel}，实际影响 ${this.impact.combinationCount} 个组合；专业：${this.impact.valid.map(item => professionName(item.professionId)).join('、')}`
+          })
           this.submitting = false
           this.$message.success(`${this.actionLabel}任务已提交`)
         }, 450)
@@ -187,5 +213,45 @@ export default {
 </script>
 
 <style scoped>
-.operation-page{max-width:1280px;margin:0 auto}.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.breadcrumb{margin-bottom:10px;color:#8a919e;font-size:12px}.breadcrumb span{color:#5f6876}.breadcrumb i{margin:0 7px}.transfer-alert{margin-top:18px}.step-shell{margin:20px 0 14px}.form-surface{min-height:590px;background:#fff;border-radius:10px}.step-content{padding:26px}.compact-step{max-width:860px;margin:0 auto;padding-top:54px}.step-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:24px}.step-heading>span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:#a90a13;font-weight:700}.step-heading h2{margin:1px 0 3px;font-size:19px}.step-heading p{margin:0;color:var(--muted)}.choice-grid{display:flex;width:100%;gap:12px}.choice-grid ::v-deep .el-radio-button{flex:1}.choice-grid ::v-deep .el-radio-button__inner{display:flex;align-items:flex-start;flex-direction:column;width:100%;padding:18px;text-align:left;border:1px solid #dfe3e8;border-radius:9px;box-shadow:none}.choice-grid ::v-deep .el-radio-button:first-child .el-radio-button__inner,.choice-grid ::v-deep .el-radio-button:last-child .el-radio-button__inner{border-radius:9px}.choice-grid ::v-deep .el-radio-button__orig-radio:checked+.el-radio-button__inner{border-color:#c91420;background:#fff3f4;color:#8f1018;box-shadow:none}.choice-grid strong{font-size:15px}.choice-grid small{margin-top:5px;color:#667085;white-space:normal}.price-choice{align-items:stretch}.number-setting{display:flex;align-items:center;gap:10px;margin-top:24px;padding:18px;background:#f7f8fa;border-radius:8px}.effective-form{max-width:420px}.effective-form .el-date-editor{width:100%}.confirmation-list{display:grid;grid-template-columns:repeat(4,1fr);margin-top:18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.confirmation-list>div{display:flex;flex-direction:column;gap:4px;padding:16px}.confirmation-list>div+div{border-left:1px solid var(--line)}.confirmation-list span{color:var(--muted);font-size:12px}.page-actions{display:flex;justify-content:flex-end;gap:8px;padding:18px 0 40px}@media(max-width:900px){.page-head{align-items:flex-start;flex-direction:column}.choice-grid{flex-direction:column}.confirmation-list{grid-template-columns:1fr 1fr}.confirmation-list>div:nth-child(3){border-left:0;border-top:1px solid var(--line)}.confirmation-list>div:nth-child(4){border-top:1px solid var(--line)}}
+.operation-page{max-width:1280px;margin:0 auto}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.breadcrumb{margin-bottom:10px;color:#8a919e;font-size:12px}
+.breadcrumb span{color:#5f6876}
+.breadcrumb i{margin:0 7px}
+.transfer-alert{margin-top:16px}
+.intro-banner{margin:16px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#166350;line-height:1.7}
+.workspace-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:18px;align-items:start}
+.config-panel,.side-column .impact-summary{border:1px solid var(--line);border-radius:10px;background:#fff}
+.config-panel{padding:22px 24px}
+.field-block{margin-bottom:28px;padding-bottom:22px;border-bottom:1px dashed var(--line)}
+.field-block:last-of-type{border-bottom:0;margin-bottom:12px;padding-bottom:0}
+.field-label{margin-bottom:6px;font-weight:700}
+.field-hint{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.6}
+.choice-grid{display:flex;width:100%;gap:12px}
+.choice-grid ::v-deep .el-radio-button{flex:1}
+.choice-grid ::v-deep .el-radio-button__inner{display:flex;align-items:flex-start;flex-direction:column;width:100%;padding:14px 16px;text-align:left;border:1px solid #dfe3e8;border-radius:9px;box-shadow:none}
+.choice-grid ::v-deep .el-radio-button:first-child .el-radio-button__inner,
+.choice-grid ::v-deep .el-radio-button:last-child .el-radio-button__inner{border-radius:9px}
+.choice-grid ::v-deep .el-radio-button__orig-radio:checked+.el-radio-button__inner{border-color:#c91420;background:#fff3f4;color:#8f1018;box-shadow:none}
+.choice-grid strong{font-size:15px}
+.choice-grid small{margin-top:5px;color:#667085;white-space:normal}
+.number-setting{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding:14px 16px;background:#f7f8fa;border-radius:8px}
+.config-panel ::v-deep .product-list{max-height:240px}
+.config-panel ::v-deep .category-list{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.config-panel .el-date-editor{width:100%}
+.save-btn{width:100%;margin-top:6px}
+.save-note{margin:8px 0 0;color:var(--muted);font-size:12px;text-align:center}
+.side-label{margin:0 0 10px;color:var(--muted);font-size:12px;font-weight:700}
+.side-column .impact-summary{margin-bottom:12px}
+.confirmation-list{display:grid;grid-template-columns:1fr 1fr;margin-bottom:18px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.confirmation-list>div{display:flex;flex-direction:column;gap:4px;padding:12px 14px}
+.confirmation-list>div:nth-child(odd){border-right:1px solid var(--line)}
+.confirmation-list>div:nth-child(n+3){border-top:1px solid var(--line)}
+.confirmation-list span{color:var(--muted);font-size:12px}
+.operation-page ::v-deep .product-picker,.operation-page ::v-deep .profession-picker{background:transparent}
+@media(max-width:980px){
+  .page-head{align-items:flex-start;flex-direction:column}
+  .workspace-grid{grid-template-columns:1fr}
+  .choice-grid{flex-direction:column}
+}
 </style>

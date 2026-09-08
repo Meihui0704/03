@@ -116,7 +116,7 @@ export default {
   },
   computed: {
     title () { return this.clinicalOnly ? '临床商品清单' : '全部项目清单' },
-    description () { return this.clinicalOnly ? '按“共用 / 执业专属 / 助理专属”查看商品，并带入后续运营操作。' : '先从 13 个业务项目中确定操作范围，再进入优惠券、上下架或调价。' },
+    description () { return this.clinicalOnly ? '按“共用 / 执业专属 / 助理专属”查看商品，并带入后续运营操作。' : '批量任务的起点：先勾专业范围，再带入优惠券、上下架或调价。项目管理只维护项目树，不从那里跳进批量任务。' },
     professionTotal () { return this.taxonomy.reduce((total, category) => total + category.groups.reduce((sum, group) => sum + group.items.length, 0), 0) },
     selectedProjects () { return Array.from(new Set(this.selectedProfessions.map(id => id.split('::')[0]))) },
     clinicalProfessionOptions () { return ['临床执业医师', '临床助理医师'] },
