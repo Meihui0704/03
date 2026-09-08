@@ -241,7 +241,7 @@
           <p v-if="dateInvalid" class="date-warning">截止时间不能早于生效时间</p>
         </div>
 
-        <el-button type="primary" class="save-btn" :loading="submitting" :disabled="unsafePricedCourses.length > 0 || ruleInvalid" @click="submit">保存配置</el-button>
+        <el-button type="primary" class="save-btn" :loading="submitting" :disabled="unsafePricedCourses.length > 0" @click="submit">保存配置</el-button>
         <p class="save-note">已选 <b>{{ professionIds.length }}</b> 个专业，实际将生成 <b>{{ impact.combinationCount }}</b> 张优惠券。测算成交价仅供参考。</p>
       </div>
 
@@ -265,10 +265,10 @@
     <el-dialog :title="priceDialog.pendingSave ? '确认保存前请核对测算价' : '优惠后成交价提醒'" :visible.sync="priceDialog.visible" width="560px" append-to-body :close-on-click-modal="false">
       <el-alert
         v-if="zeroPricedCourses.length"
-        type="warning"
+        type="info"
         :closable="false"
         show-icon
-        title="当前优惠减免后，测算成交价为 0 元。0 元等于免单，请确认是否故意做成免费。"
+        title="测算成交价为 0 元也可以保存。只有优惠后低于 0 元才会拦截。"
       />
       <p class="preview-caption">测算成交价（仅供参考），接入真实售价和后台规则后可能不同。</p>
       <ul class="preview-list">
@@ -402,18 +402,11 @@ export default {
       return this.form.startAt && this.form.endAt && new Date(this.form.endAt).getTime() <= new Date(this.form.startAt).getTime()
     },
     ruleInvalid () {
-      const amount = Number(this.form.amount)
-      const threshold = Number(this.form.threshold)
-      if (this.form.type === 'FULL') return !(threshold > 0) || !(amount > 0) || amount >= threshold
-      if (this.form.type === 'DIRECT') return !(amount > 0)
+      if (this.form.type === 'DIRECT') return !(Number(this.form.amount) > 0)
       return false
     },
     ruleWarning () {
       if (!this.ruleInvalid) return ''
-      if (this.form.type === 'FULL' && !(Number(this.form.threshold) > 0)) {
-        return `满 ${this.form.threshold} 减 ${this.form.amount} 等于无门槛立减，满减规则本身不成立，不必再核售价。请把门槛改为大于减免金额，或改用「自定义直减」。`
-      }
-      if (this.form.type === 'FULL') return '满减金额必须大于 0，且小于使用门槛。'
       return '直减金额必须大于 0。'
     },
     zeroPricedCourses () {
@@ -429,7 +422,7 @@ export default {
           return { id: item.id, name: item.name, tone: 'bad', detail: `售价 ${item.price} 元 → 测算成交价 ${payable} 元（仅供参考）· 低于 0，不能保存` }
         }
         if (payable === 0) {
-          return { id: item.id, name: item.name, tone: 'warn', detail: `售价 ${item.price} 元 → 测算成交价 0 元（仅供参考）· 将变为免费` }
+          return { id: item.id, name: item.name, tone: '', detail: `售价 ${item.price} 元 → 测算成交价 0 元（仅供参考）` }
         }
         return { id: item.id, name: item.name, tone: '', detail: `售价 ${item.price} 元 → 测算成交价 ${payable} 元（仅供参考）` }
       })
@@ -449,7 +442,7 @@ export default {
         const payable = this.payableAfterCoupon(item.price)
         return `「${item.name}」售价 ${item.price} 元，优惠后 ${payable} 元`
       }).join('；')
-      return `优惠后总价不能低于 0 元，否则会亏本。请下调优惠：${names}`
+      return `优惠后成交价可以是 0 元，但不能低于 0 元。请下调优惠：${names}`
     },
     priceCheck () {
       if (this.ruleInvalid) {
@@ -458,23 +451,19 @@ export default {
       if (this.unsafePricedCourses.length) {
         return { tone: 'error', title: this.priceFloorWarning }
       }
-      if (this.zeroPricedCourses.length) {
-        const names = this.zeroPricedCourses.map(item => `「${item.name}」`).join('、')
-        return { tone: 'warning', title: `${names} 优惠减免后测算成交价为 0 元（仅供参考）。0 元等于免单，保存前会再弹窗确认。` }
-      }
       if (this.unpricedCourses.length) {
         const names = this.unpricedCourses.map(item => `「${item.name}」`).join('、')
         return {
           tone: 'warning',
-          title: `${names} 暂无售价，无法确认优惠后是否低于 0 元。请勾选临床有标价商品（如「2026昭师进阶班」8330 元）验算，接入真实售价后会拦截亏本优惠。`
+          title: `${names} 暂无售价，无法确认优惠后是否低于 0 元。成交价大于 0 或等于 0 都可以保存；接入真实售价后只会拦截低于 0 的亏本优惠。`
         }
       }
       if (this.selectedCourses.length) {
         const payables = this.selectedCourses.map(item => this.payableAfterCoupon(item.price)).filter(value => value !== null)
         const lowest = Math.min.apply(null, payables)
-        return { tone: 'success', title: `优惠后成交价不能低于 0 元。当前最低测算成交价 ${lowest} 元（仅供参考）。` }
+        return { tone: 'success', title: `成交价大于 0 或等于 0 都可以保存。当前最低测算成交价 ${lowest} 元（仅供参考）。` }
       }
-      return { tone: 'info', title: '优惠后成交价不能低于 0 元。勾选有标价的商品后，会在这里实时验算。' }
+      return { tone: 'info', title: '成交价大于 0 或等于 0 都可以保存，低于 0 才拦截。勾选有标价的商品后，会在这里实时验算。' }
     },
     clickCompare () {
       const n = this.professionIds.length
@@ -495,13 +484,6 @@ export default {
         ? `<br>其中 <b>${this.impact.mismatched.length}</b> 个专业（${this.impact.mismatched.map(item => item.name).join('、')}）不在已选商品的覆盖范围内，不会生成优惠券。`
         : ''
       return `已选择 <b>${this.professionIds.length}</b> 个专业（跨 ${cats.length} 个业务大类：${cats.join('、')}） × <b>${this.productIds.length}</b> 个课程，实际将生成 <b>${this.impact.combinationCount}</b> 张「${this.discountSummary}」优惠券。${flagText}${mismatchText}`
-    }
-  },
-  watch: {
-    'zeroPricedCourses.length' (count, previous) {
-      if (count > 0 && previous === 0 && !this.priceDialog.visible) {
-        this.priceDialog = { visible: true, pendingSave: false }
-      }
     }
   },
   methods: {
@@ -561,7 +543,7 @@ export default {
       const payable = this.payableAfterCoupon(course.price)
       if (payable === null) return '未标价，无法测算（仅供参考）'
       if (payable < 0) return `测算成交价 ${payable} 元（仅供参考）· 亏本`
-      if (payable === 0) return '测算成交价 0 元（仅供参考）· 将免费'
+      if (payable === 0) return '测算成交价 0 元（仅供参考）'
       return `测算成交价 ${payable} 元（仅供参考）`
     },
     makeId (category, item) { return `${category}::${item}` },
