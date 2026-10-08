@@ -44,7 +44,7 @@
       <el-form ref="addForm" :model="newProduct" :rules="addRules" label-width="90px">
         <el-form-item label="商品名称" prop="name"><el-input v-model.trim="newProduct.name" maxlength="50" show-word-limit /></el-form-item>
         <el-form-item label="商品分组" prop="category"><el-select v-model="newProduct.category" style="width:100%"><el-option v-for="item in middleCategories" :key="item" :label="item" :value="item" /></el-select></el-form-item>
-        <el-form-item label="商品价格"><el-input-number v-model="newProduct.price" :min="0" :precision="2" controls-position="right" style="width:100%" /></el-form-item>
+        <el-form-item label="商品价格"><el-input v-model.trim="newProduct.price" placeholder="一次填好价格" /></el-form-item>
         <el-alert type="info" :closable="false" show-icon title="新增商品默认覆盖 19 个中级职称专业，保存时仍会执行覆盖校验。" />
       </el-form>
       <span slot="footer"><el-button @click="addVisible=false">取消</el-button><el-button type="primary" @click="addProduct">确认新增</el-button></span>
@@ -65,7 +65,7 @@ export default {
       keyword: '',
       addVisible: false,
       middleCategories: ['刷题必买', '高端进阶', '高分密训', '基础夯实'],
-      newProduct: { name: '', category: '刷题必买', price: 0 },
+      newProduct: { name: '', category: '刷题必买', price: '' },
       addRules: { name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }], category: [{ required: true, message: '请选择商品分组', trigger: 'change' }] }
     }
   },
@@ -102,13 +102,15 @@ export default {
       this.$refs.addForm.validate(valid => {
         if (!valid) return
         if (this.products.some(item => item.name === this.newProduct.name)) return this.$message.warning('该商品名称已存在，请换一个名称')
+        const price = this.newProduct.price === '' ? null : Number(this.newProduct.price)
+        if (this.newProduct.price !== '' && (!Number.isFinite(price) || price < 0)) return this.$message.warning('请一次填好 0 或以上的价格')
         const product = {
           id: `zzzc-new-${Date.now()}`,
           name: this.newProduct.name,
           project: '中级职称',
           category: this.newProduct.category,
           scope: zzzcScope.slice(),
-          price: this.newProduct.price,
+          price,
           status: 'OFF',
           source: '中级职称课程库'
         }
@@ -133,7 +135,7 @@ export default {
       this.products = this.products.map(item => ids.includes(item.id) && typeof item.price === 'number' ? { ...item, price: calculator(item.price) } : item)
       this.$emit('change', this.value, this.products.filter(item => this.value.includes(item.id)))
     },
-    resetAddForm () { this.newProduct = { name: '', category: '刷题必买', price: 0 }; if (this.$refs.addForm) this.$refs.addForm.clearValidate() }
+    resetAddForm () { this.newProduct = { name: '', category: '刷题必买', price: '' }; if (this.$refs.addForm) this.$refs.addForm.clearValidate() }
   }
 }
 </script>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>运营配置助手 · 技术对接表（可贴 Docs）</title>
+<style>
+  body { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; font-size: 14px; line-height: 1.5; color: #222; max-width: 920px; margin: 24px auto 64px; padding: 0 20px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  h2 { font-size: 17px; margin: 28px 0 10px; }
+  h3 { font-size: 15px; margin: 18px 0 8px; }
+  p, li { margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 13px; }
+  th, td { border: 1px solid #333; padding: 6px 8px; vertical-align: top; text-align: left; }
+  th { background: #f3f3f3; font-weight: 600; }
+  .tip { background: #fff8e6; border: 1px solid #e6d7a8; padding: 10px 12px; margin: 12px 0 20px; }
+</style>
+</head>
+<body>
+<p class="tip">用法：本页全选（Command + A）→ 复制（Command + C）→ 粘贴到腾讯文档 / Google 文档。表格会一起带过去。</p>
+
+<h1>运营配置助手｜技术对接说明</h1>
+<p>整理：运营（美惠）　日期：2026-09-08　给技术对齐用，不是再画页面。</p>
+
+<h2>0. 一句话</h2>
+<table>
+  <tr><th>项</th><th>口径</th></tr>
+  <tr><td>定位</td><td>盖在原后台之上的运营工作台。新版页面 → 原后台接口 → 原数据库 → App / 小程序 / PC。</td></tr>
+  <tr><td>不做什么</td><td>不新建商品库；不改原 ID；不改原权限；不编未确认售价、小节 ID、活动、推荐商品。</td></tr>
+  <tr><td>谁拍板</td><td>入口和任务形态听运营；现用字段听张旭；接口、校验、搜索、撤回落库听技术。</td></tr>
+</table>
+
+<h2>1. 职责分工</h2>
+<table>
+  <tr><th>角色</th><th>拍板范围</th></tr>
+  <tr><td>运营（美惠）</td><td>工作台入口位置、左侧名称、批量怎么操作（一屏填规则、按科室勾专业、一次生成）。</td></tr>
+  <tr><td>张旭 / 现网后台</td><td>哪些字段还在用、枚举和售价、试听内容从哪来。已停用模块不要按旧图恢复。</td></tr>
+  <tr><td>技术</td><td>接口、拆请求、服务端校验、权限、商品搜索、撤回、分页、上传。</td></tr>
+</table>
+<p>已确认例子：旧「App免费体验课」的配置内容 / 关联小节长期不用。现网是商品页「配置头图免费试听 / 配置列表免费试听」。入口在「App引流课管理」，名称按运营，字段按张旭。</p>
+
+<h2>2. 全局写入规则（优惠券、上下架、调价同一套）</h2>
+<table>
+  <tr><th>规则</th><th>运营已确认口径</th></tr>
+  <tr><td>一次保存</td><td>同一规则落到所有有效「商品 × 专业」。后台若只能逐条写，由适配层拆成 N 次请求，对运营仍是一次任务。</td></tr>
+  <tr><td>覆盖不到的专业</td><td>跳过，不写脏数据，结果里标明原因。不要每个专业再走一遍向导。</td></tr>
+  <tr><td>15 秒内撤回</td><td>允许。必须整批收回，禁止一半有券一半没有。</td></tr>
+  <tr><td>撤回之后</td><td>这次任务作废，重新选范围再保存，不在半成品上续写。</td></tr>
+  <tr><td>超过 15 秒</td><td>不能靠这个撤回。之后走后台正常下架 / 删除 / 再配一批。</td></tr>
+  <tr><td>写入中途失败</td><td>同样整批作废，明确告诉失败原因。不要静默部分成功。</td></tr>
+  <tr><td>撤回实现</td><td>必须服务端提供（操作单号 / 短时快照）。有效期由后端返回 undoExpireAt，不要前端自己倒计时当真。</td></tr>
+  <tr><td>幂等</td><td>短时间重复点保存，不能发两批真实券或调价。需任务号或幂等键。</td></tr>
+</table>
+
+<h2>3. 价格与亏本</h2>
+<table>
+  <tr><th>项</th><th>口径</th></tr>
+  <tr><td>前端测算价</td><td>仅供参考，不是最终能否保存的依据。</td></tr>
+  <tr><td>成交价 ≥ 0</td><td>可以保存（等于 0 也可以）。</td></tr>
+  <tr><td>成交价 &lt; 0</td><td>拦截亏本。</td></tr>
+  <tr><td>满减门槛</td><td>可以为 0（满 0 减 N 允许配）。</td></tr>
+  <tr><td>无售价商品</td><td>前端不编价格（含中级职称精英班等）。只提示无法确认是否低于 0。</td></tr>
+  <tr><td>最终拦截</td><td>必须用后台当时真实售价再算一遍。前端过、后台不过，以后台为准。</td></tr>
+</table>
+
+<h2>4. 工程接入（已迁页面通用）</h2>
+<table>
+  <tr><th>事项</th><th>要求</th></tr>
+  <tr><td>演示数据</td><td>localStorage / sessionStorage 不能当真源。列表、详情、写操作走原接口。</td></tr>
+  <tr><td>ID</td><td>项目、专业、子级、商品、广告、页面一律用后台 ID。</td></tr>
+  <tr><td>权限</td><td>按钮接原权限。演示操作人「美惠」不能当生产身份。</td></tr>
+  <tr><td>校验</td><td>必填、状态、冲突、有效期、图片，服务端再校验一次。</td></tr>
+  <tr><td>操作人</td><td>返回最后修改人、修改时间。</td></tr>
+  <tr><td>枚举</td><td>code 以后台字典为准，前端不发明新枚举。</td></tr>
+</table>
+
+<h2>5. 按模块要对齐的事</h2>
+<table>
+  <tr><th>模块</th><th>要对齐的事项</th></tr>
+  <tr><td>项目管理</td><td>上架 / 已下架分开。所属项目为空的专业进「信息待补充」，不猜填 ID。子级无真实 ID 不编。删除 / 下架的服务端影响面需技术说明。</td></tr>
+  <tr><td>广告素材</td><td>去向选商品必须搜索真实商品 ID，原型手填作废。图片走现有上传。像素以后台为准。列表服务端分页。复制 1/5/10 条由后台生成新 ID，默认今日下架。新记录默认下架。</td></tr>
+  <tr><td>金刚区（含磁片区）</td><td>去向不完整不能启用。落到商品同样搜 ID。「光荣榜」= App 刷题排行榜，route code 由接口返回。项目专业树与项目管理同一数据源。15 秒整批撤回与广告相同。</td></tr>
+  <tr><td>AI 工具集</td><td>App 中部 6 个入口，不擅自增删。「推荐管理」现网未关联商品，不要编推荐商品。</td></tr>
+  <tr><td>意见反馈</td><td>工作台先分未处理 / 已处理；落库仍用待处理、处理中、已回复、已关闭。不要假设有启停能力。</td></tr>
+  <tr><td>App 优惠券</td><td>列表是任务维度，不是每张券一张工单。一次保存拆 N 条；失败或 15 秒撤回 = 整批作废。生效 / 截止必填，截止不能早于生效。</td></tr>
+  <tr><td>上下架</td><td>一屏完成，不要四步向导。生效 + 截止都必填。上架：生效起可售、截止后停售。下架：生效起停售、截止结束本次窗口。是否自动恢复上架以后台为准。</td></tr>
+  <tr><td>批量调价</td><td>只要生效时间。亏本、权限、15 秒整批撤回与优惠券同一套。</td></tr>
+  <tr><td>清单带入批量</td><td>用任务草稿或查询参数，不要依赖浏览器临时存储。</td></tr>
+  <tr><td>App 引流课</td><td>对应「配置头图免费试听」「配置列表免费试听」。头图一条，列表可多条。第一个下拉走商品接口。第二个下拉等试听内容接口，禁止编小节 ID。旧关联小节不要接入。</td></tr>
+  <tr><td>商品清单</td><td>挑货入口，不是项目管理。售价和覆盖专业来自现网。无价就保持无价。</td></tr>
+</table>
+
+<h2>6. 本期不要做、也不要编数据</h2>
+<table>
+  <tr><th>左侧入口</th><th>口径</th></tr>
+  <tr><td>活动列表</td><td>只标明入口。接入用原活动接口和 ID，不编活动。</td></tr>
+  <tr><td>活动分类管理</td><td>沿用原分类接口和 ID，不另建一套。</td></tr>
+  <tr><td>App 商品推荐管理</td><td>按原推荐规则读写，不编推荐商品。</td></tr>
+</table>
+
+<h2>7. 技术会建议先确认</h2>
+<table>
+  <tr><th>序号</th><th>问题</th><th>运营倾向</th></tr>
+  <tr><td>1</td><td>批量写的任务单号、拆条方式、部分失败是否整批回滚</td><td>整批回滚</td></tr>
+  <tr><td>2</td><td>15 秒撤回服务端怎么做、过期如何拒绝、广告现网有没有同类能力</td><td>与广告对齐</td></tr>
+  <tr><td>3</td><td>幂等键，重复保存如何去重</td><td>不能发两批</td></tr>
+  <tr><td>4</td><td>售价何时为空、亏本由哪个服务判定</td><td>以后台为准</td></tr>
+  <tr><td>5</td><td>商品搜索接口：广告、金刚区、引流课是否共用</td><td>希望共用</td></tr>
+  <tr><td>6</td><td>引流课试听内容接口字段，是否与商品页同一套</td><td>跟现网商品页</td></tr>
+  <tr><td>7</td><td>图片上传与像素校验现网规则</td><td>不编像素</td></tr>
+  <tr><td>8</td><td>光荣榜 / 刷题排行榜 route code；周考排行是否另一路由</td><td>code 由技术给</td></tr>
+  <tr><td>9</td><td>优惠券、调价、上下架的按钮权限点</td><td>跟原后台</td></tr>
+  <tr><td>10</td><td>活动、推荐现网是否仍用</td><td>未确认则继续空着</td></tr>
+</table>
+
+<h2>8. 验收合格标准</h2>
+<table>
+  <tr><th>项</th><th>合格看起来怎样</th></tr>
+  <tr><td>批量写</td><td>一次保存后，要么完整一批，要么完整没有。</td></tr>
+  <tr><td>撤回</td><td>15 秒内撤回后，App 看不到这批券 / 这批价。</td></tr>
+  <tr><td>价格</td><td>无售价商品没有被写死一个编出来的价格。</td></tr>
+  <tr><td>广告去向</td><td>能搜到真实商品 ID。</td></tr>
+  <tr><td>引流课</td><td>第二个下拉要么有真数据，要么空，没有假小节。</td></tr>
+  <tr><td>边界</td><td>原 ID、权限、App 展示与改版前一致，只是运营路径变短。</td></tr>
+</table>
+
+<h2>9. 通用枚举（建议值，正式以后台为准）</h2>
+<table>
+  <tr><th>字段</th><th>建议值</th><th>含义</th></tr>
+  <tr><td>status</td><td>ON / OFF</td><td>使用中 / 已停用（广告页也可显示上架 / 已下架）</td></tr>
+  <tr><td>appCode</td><td>APP / MINI_PROGRAM / PC</td><td>昭昭医考 App / 小程序 / 网校 PC</td></tr>
+  <tr><td>openMode</td><td>APP_IN / APP_OUT / MINI</td><td>App 内 / 外部链接 / 小程序</td></tr>
+  <tr><td>entryPosition</td><td>DIAMOND / TILE</td><td>金刚区 / 磁片区</td></tr>
+  <tr><td>adType</td><td>BANNER / POPUP / FLOATING / SPLASH</td><td>轮播图 / 弹层 / 悬浮 / 开屏</td></tr>
+</table>
+
+<h2>10. 广告素材 · 输入字段</h2>
+<table>
+  <tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+  <tr><td>id</td><td>number</td><td>编辑时</td><td>后端生成</td></tr>
+  <tr><td>adType</td><td>enum</td><td>是</td><td>广告形式</td></tr>
+  <tr><td>appCode</td><td>enum</td><td>是</td><td>投放应用</td></tr>
+  <tr><td>pageCode</td><td>string</td><td>是</td><td>页面字典接口</td></tr>
+  <tr><td>positionCode</td><td>string</td><td>轮播图必填</td><td>图 1、图 2 等位置字典</td></tr>
+  <tr><td>projectIds</td><td>number[]</td><td>是</td><td>项目字典</td></tr>
+  <tr><td>professionIds</td><td>number[]</td><td>是</td><td>随项目联动</td></tr>
+  <tr><td>targetType</td><td>string</td><td>是</td><td>商品、普通页面、外部链接、无跳转</td></tr>
+  <tr><td>productType</td><td>string</td><td>商品时必填</td><td>必须由真实商品类型接口返回</td></tr>
+  <tr><td>targetId / targetUrl</td><td>string</td><td>条件必填</td><td>商品必须搜索后保存真实 ID，禁止手填</td></tr>
+  <tr><td>imageUrl</td><td>string</td><td>是</td><td>上传接口返回</td></tr>
+  <tr><td>startAt / endAt</td><td>datetime</td><td>是</td><td>投放有效期</td></tr>
+  <tr><td>sortNo</td><td>number</td><td>轮播图必填</td><td>同位置展示顺序</td></tr>
+  <tr><td>status</td><td>enum</td><td>是</td><td>新增、复制默认 OFF</td></tr>
+</table>
+
+<h3>广告 · 输出结果</h3>
+<table>
+  <tr><th>操作</th><th>返回</th></tr>
+  <tr><td>保存</td><td>记录 ID、版本号、修改人、修改时间、最终状态</td></tr>
+  <tr><td>复制</td><td>全部副本 ID；默认下架；15 秒整批撤回</td></tr>
+  <tr><td>上下架</td><td>变更后状态及冲突校验结果</td></tr>
+  <tr><td>批量（广告）</td><td>成功 ID、失败 ID、失败原因</td></tr>
+  <tr><td>批量（优惠券 / 调价）</td><td>不按部分成功；失败则整批作废</td></tr>
+  <tr><td>撤回</td><td>用 operationId 恢复数据，并恢复操作前筛选上下文</td></tr>
+</table>
+
+<h2>11. 金刚区（含磁片区）· 输入字段</h2>
+<table>
+  <tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+  <tr><td>id</td><td>number</td><td>编辑时</td><td>后端生成</td></tr>
+  <tr><td>name</td><td>string</td><td>是</td><td>建议 2–6 字，最大长度以后端为准</td></tr>
+  <tr><td>iconUrl</td><td>string</td><td>是</td><td>建议 80×80，尺寸由上传接口校验</td></tr>
+  <tr><td>appCode</td><td>enum</td><td>是</td><td>App 或小程序</td></tr>
+  <tr><td>pageCode</td><td>string</td><td>是</td><td>当前为首页，仍保留接口字段</td></tr>
+  <tr><td>entryPosition</td><td>enum</td><td>是</td><td>金刚区或磁片区</td></tr>
+  <tr><td>projectIds</td><td>number[]</td><td>是</td><td>支持多选</td></tr>
+  <tr><td>professionIds</td><td>number[]</td><td>是</td><td>必须属于已选项目</td></tr>
+  <tr><td>openMode</td><td>enum</td><td>是</td><td>App 内、App 外、小程序</td></tr>
+  <tr><td>targetPageCode</td><td>string</td><td>条件必填</td><td>打开对象字典</td></tr>
+  <tr><td>targetContentId</td><td>string</td><td>条件必填</td><td>商品、试卷、试题、活动等真实 ID</td></tr>
+  <tr><td>externalUrl</td><td>string</td><td>外链时</td><td>只接受 https</td></tr>
+  <tr><td>miniAppId / miniPath</td><td>string</td><td>小程序时</td><td>小程序标识和页面路径</td></tr>
+  <tr><td>validityType</td><td>LONG_TERM / RANGE</td><td>是</td><td>长期或时间段</td></tr>
+  <tr><td>startAt / endAt</td><td>datetime</td><td>RANGE 时</td><td>生效时间</td></tr>
+  <tr><td>status</td><td>enum</td><td>是</td><td>去向不完整时禁止 ON</td></tr>
+</table>
+<p>HONOR 业务文案已确认：App 刷题排行榜。其他打开对象的正式 code 由技术提供。</p>
+
+<h3>金刚区 · 输出结果</h3>
+<table>
+  <tr><th>操作</th><th>返回</th></tr>
+  <tr><td>保存基础信息</td><td>入口 ID、版本号、待配置项</td></tr>
+  <tr><td>保存去向</td><td>标准化目标摘要</td></tr>
+  <tr><td>启用</td><td>冲突清单；无阻断时返回 ON</td></tr>
+  <tr><td>预览</td><td>完整字段、最终跳转、展示范围、有效期</td></tr>
+</table>
+
+<h2>12. 冲突校验</h2>
+<table>
+  <tr><th>级别</th><th>情形</th></tr>
+  <tr><td>阻断保存或启用</td><td>必填缺失、图片失败、目标 ID 不存在；结束时间 ≤ 开始时间；外链不是完整 https；小程序缺 AppID 或路径；目标已删/停用或不属于所选项目专业；专业不属于所选项目；同一应用+页面+位置+项目+专业+重叠有效期内不允许并存；轮播图同范围同有效期 sortNo 重复。</td></tr>
+  <tr><td>可存草稿，禁止启用</td><td>未配去向；未上传合规图；目标不可用；有效期不完整。</td></tr>
+  <tr><td>仅提示确认</td><td>同一素材投多个专业；同一目标被多个入口引用；批量跨项目或跨页面；改正在前台使用的记录。</td></tr>
+</table>
+<p>建议接口返回 BLOCK / WARN / PASS 及可读原因。唯一性规则最终由产品和技术确认。</p>
+
+<h2>13. 建议接口（路径仅为示例）</h2>
+<table>
+  <tr><th>方法</th><th>路径示例</th><th>用途</th></tr>
+  <tr><td>GET</td><td>/api/ops/dictionaries</td><td>应用、页面、位置、打开对象等字典</td></tr>
+  <tr><td>GET</td><td>/api/ops/projects</td><td>项目与专业树</td></tr>
+  <tr><td>GET</td><td>/api/ops/ads</td><td>广告素材列表</td></tr>
+  <tr><td>POST / PUT</td><td>/api/ops/ads 、 /api/ops/ads/{id}</td><td>新增、编辑广告</td></tr>
+  <tr><td>POST</td><td>/api/ops/ads/{id}/copy</td><td>复制 1 / 5 / 10 条</td></tr>
+  <tr><td>POST</td><td>/api/ops/ads/batch-status</td><td>批量上下架</td></tr>
+  <tr><td>GET</td><td>/api/ops/entries</td><td>金刚区 / 磁片区列表</td></tr>
+  <tr><td>POST / PUT</td><td>/api/ops/entries 、 /api/ops/entries/{id}</td><td>新增、编辑入口</td></tr>
+  <tr><td>PUT</td><td>/api/ops/entries/{id}/destination</td><td>单独改点击去向</td></tr>
+  <tr><td>POST</td><td>/api/ops/validate-conflicts</td><td>保存或启用前冲突校验</td></tr>
+  <tr><td>POST</td><td>/api/ops/operations/{operationId}/undo</td><td>撤回</td></tr>
+  <tr><td>POST</td><td>/api/files/images</td><td>图片 / 图标上传</td></tr>
+</table>
+<p>正式路径以后台为准，上表只方便对照能力，不当成必须照抄的 URL。</p>
+
+<h2>14. 权限、审计、反馈</h2>
+<table>
+  <tr><th>项</th><th>口径</th></tr>
+  <tr><td>权限拆分</td><td>查看、新增、编辑、上下架、批量操作、删除</td></tr>
+  <tr><td>写操作日志</td><td>operatorId、operatorName、operationId、before、after、createdAt</td></tr>
+  <tr><td>删除</td><td>是否物理删除跟现有后台；确认框显示名称、ID、影响数量</td></tr>
+  <tr><td>成功文案</td><td>改了什么、影响几条、去哪里查看</td></tr>
+  <tr><td>阻断文案</td><td>直接说缺失字段或冲突对象，并给返回修改入口</td></tr>
+  <tr><td>撤回</td><td>恢复数据，同时恢复操作前的筛选、分类、排序和滚动位置</td></tr>
+</table>
+
+<h2>15. 广告 / 金刚区仍待技术确认</h2>
+<table>
+  <tr><th>序号</th><th>确认项</th></tr>
+  <tr><td>1</td><td>正式项目 / 专业树接口及一级项目真实 code</td></tr>
+  <tr><td>2</td><td>广告形式、显示页面、位置、商品类型正式字典</td></tr>
+  <tr><td>3</td><td>各打开对象的 targetId、路由参数、可用状态</td></tr>
+  <tr><td>4</td><td>周考排行和 App 刷题排行榜是否两个独立路由</td></tr>
+  <tr><td>5</td><td>唯一位置和有效期重叠的最终冲突规则</td></tr>
+  <tr><td>6</td><td>广告批量接口最大条数（优惠券 / 调价不采用部分成功）</td></tr>
+  <tr><td>7</td><td>删除、撤回、操作日志的现有后台规范</td></tr>
+</table>
+</body>
+</html>

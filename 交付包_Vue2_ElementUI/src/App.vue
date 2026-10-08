@@ -19,7 +19,15 @@
           >{{ item.label }}</router-link>
         </div>
         <p class="group-title">商品与营销</p>
-        <router-link v-for="item in businessMenus" :key="item.path" :to="item.path">{{ item.label }}</router-link>
+        <div v-for="block in businessBlocks" :key="block.id" class="nav-block">
+          <p v-if="block.title" class="sub-title">{{ block.title }}</p>
+          <router-link
+            v-for="item in block.items"
+            :key="item.path"
+            :class="{ nested: !!block.title }"
+            :to="item.path"
+          >{{ item.label }}</router-link>
+        </div>
       </aside>
       <main><router-view :key="$route.fullPath" /></main>
     </div>
@@ -52,8 +60,8 @@ export default {
         id: 'activity',
         title: '活动管理',
         items: [
-          { label: '活动列表', path: '/activity-list' },
-          { label: '活动分类管理', path: '/activity-categories' }
+          { label: '活动类目管理', path: '/activity-categories' },
+          { label: '配置活动', path: '/activity-list' }
         ]
       },
       {
@@ -73,18 +81,35 @@ export default {
         ]
       }
     ],
-    businessMenus: [
-      { label: '全部项目清单', path: '/business-lines' },
-      { label: '临床商品清单', path: '/clinical-products' },
-      { label: '商品课程上下架', path: '/course-shelf' },
-      { label: '商品批量调价', path: '/product-price' }
+    businessBlocks: [
+      {
+        id: 'product-admin',
+        title: '商品管理',
+        items: [
+          { label: '课程上下架', path: '/course-shelf' },
+          { label: '商品列表', path: '/product-list' },
+          { label: 'PC筛选配置', path: '/product-pc-filter' },
+          { label: '售卖热词', path: '/product-hotwords' },
+          { label: '协议管理', path: '/product-agreements' },
+          { label: '运费管理', path: '/product-freight' }
+        ]
+      },
+      {
+        id: 'product-batch',
+        title: '',
+        items: [
+          { label: '全部项目清单', path: '/business-lines' },
+          { label: '临床商品清单', path: '/clinical-products' },
+          { label: '商品批量调价', path: '/product-price' }
+        ]
+      }
     ]
   }),
   computed: {
     allMenus () {
       return this.foundationMenus.concat(
         this.operationBlocks.reduce((list, block) => list.concat(block.items), []),
-        this.businessMenus
+        this.businessBlocks.reduce((list, block) => list.concat(block.items), [])
       )
     },
     currentLabel () {

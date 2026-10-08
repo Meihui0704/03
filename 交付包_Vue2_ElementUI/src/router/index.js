@@ -10,6 +10,13 @@ import AiTools from '../views/AiTools.vue'
 import Feedback from '../views/Feedback.vue'
 import TrialCourse from '../views/TrialCourse.vue'
 import ProjectManagement from '../views/ProjectManagement.vue'
+import ActivityCategories from '../views/ActivityCategories.vue'
+import ActivityList from '../views/ActivityList.vue'
+import ProductList from '../views/ProductList.vue'
+import ProductPcFilter from '../views/ProductPcFilter.vue'
+import ProductAgreements from '../views/ProductAgreements.vue'
+import ProductHotwords from '../views/ProductHotwords.vue'
+import ProductFreight from '../views/ProductFreight.vue'
 
 Vue.use(Router)
 
@@ -31,13 +38,18 @@ export default new Router({
     { path: '/advertising-material', component: AdvertisingMaterial },
     { path: '/diamond-zone', component: DiamondZoneManagement },
     { path: '/ai-tools', name: 'ai-tools', component: AiTools },
-    modulePage('activity-list', '活动列表', '真实后台在「活动管理」下。本期审查演示尚未迁入活动模块；这里只标明入口位置，不会假装已经接好活动数据。'),
-    modulePage('activity-categories', '活动分类管理', '真实后台在「活动管理」下。本期未迁入分类维护；接入时沿用原活动分类接口和 ID，不另建一套分类。'),
+    { path: '/activity-list', name: 'activity-list', component: ActivityList },
+    { path: '/activity-categories', name: 'activity-categories', component: ActivityCategories },
     { path: '/feedback', name: 'feedback', component: Feedback },
     { path: '/trial-course', name: 'trial-course', component: TrialCourse },
     modulePage('product-recommend', 'App商品推荐管理', '真实后台在「运营管理」下。本期未迁入推荐配置；接入后按原推荐规则读写，不在演示里编造推荐商品。'),
     { path: '/coupon-tasks', name: 'coupon-tasks', component: CouponConfig },
     { path: '/coupon-config', redirect: '/coupon-tasks' },
+    { path: '/product-list', name: 'product-list', component: ProductList },
+    { path: '/product-pc-filter', name: 'product-pc-filter', component: ProductPcFilter },
+    { path: '/product-agreements', name: 'product-agreements', component: ProductAgreements },
+    { path: '/product-hotwords', name: 'product-hotwords', component: ProductHotwords },
+    { path: '/product-freight', name: 'product-freight', component: ProductFreight },
     { path: '/course-shelf', name: 'course-shelf', component: ProductOperation, props: { mode: 'shelf' } },
     { path: '/product-price', name: 'product-price', component: ProductOperation, props: { mode: 'price' } },
     { path: '/business-lines', name: 'business-lines', component: ProductCatalog, props: { clinicalOnly: false } },

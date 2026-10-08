@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中级职称 · 优惠券配置</title>
+<style>
+  :root{
+    --jade:#1F8A6E;
+    --jade-dark:#166350;
+    --jade-tint:#E4F2EC;
+    --blue:#4A90E2;
+    --text:#2B2B2B;
+    --muted:#8A8A8A;
+    --line:#E3E3E3;
+    --amber:#B8862E;
+    --amber-tint:#FBF3E2;
+    --brand:#D7000F;
+    --brand-dark:#A3000C;
+    --brand-tint:#FBE7E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:#F5F6F7;color:var(--text);
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1080px;margin:0 auto;padding:24px 20px 60px;}
+
+  .brand-header{
+    display:flex;align-items:center;gap:12px;margin-bottom:16px;
+  }
+  .brand-header img{height:34px;display:block;}
+  .brand-header .sep{width:1px;height:22px;background:var(--line);}
+  .brand-header .page-name{font-size:13px;color:var(--muted);font-weight:600;}
+
+  .toolbar{
+    display:flex;justify-content:space-between;align-items:center;
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:12px 18px;margin-bottom:18px;
+  }
+  .toolbar-title{font-size:13.5px;font-weight:700;color:var(--text);}
+  .switch-wrap{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);}
+  .switch{
+    width:42px;height:22px;border-radius:12px;background:#D8DBDA;position:relative;cursor:pointer;transition:.2s;
+  }
+  .switch.on{background:var(--jade);}
+  .switch-dot{
+    position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2);
+  }
+  .switch.on .switch-dot{left:22px;}
+  .switch-label{font-weight:700;}
+  .switch-label.on{color:var(--jade-dark);}
+
+  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start;}
+  @media (max-width:860px){.grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 24px;
+  }
+  .field-row{margin-bottom:20px;}
+  .field-label{
+    font-size:13px;color:var(--text);margin-bottom:8px;font-weight:500;
+  }
+  .field-label .req{color:#E0453C;margin-right:2px;}
+  .field-line{display:flex;gap:10px;align-items:center;}
+  .chip-static{
+    flex:1;border:1px solid var(--line);border-radius:6px;padding:8px 12px;
+    background:#FAFAFA;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;
+    cursor:default;
+  }
+  .chip-static .tag{
+    background:var(--brand-tint);border-radius:5px;padding:3px 8px;font-size:12px;color:var(--brand-dark);
+    display:flex;align-items:center;gap:5px;font-weight:600;
+  }
+  .chip-static .tag .x-disabled{opacity:.4;}
+  .btn-plain.disabled{
+    color:#C7C7C7;border-color:#EDEDED;background:#FBFBFB;cursor:not-allowed;
+  }
+  .btn-plain{
+    border:1px solid var(--line);background:#fff;border-radius:6px;padding:8px 16px;
+    font-size:12.5px;color:var(--text);cursor:pointer;white-space:nowrap;
+  }
+  .btn-plain:hover{border-color:var(--muted);}
+
+  .select-box{
+    border:1.5px solid var(--blue);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--muted);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+
+  /* 新增标签模块 */
+  .new-feature{
+    margin-top:10px;border:1.5px dashed var(--jade);border-radius:8px;
+    background:var(--jade-tint);padding:12px 14px;
+    animation:fadeIn .3s ease;
+  }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  .new-feature-label{
+    font-size:11px;font-weight:800;color:var(--jade-dark);margin-bottom:8px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .new-feature-label .badge{
+    background:var(--jade);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;
+  }
+  .tag-chip-row{display:flex;flex-wrap:wrap;gap:7px;}
+  .tag-chip{
+    padding:6px 12px;border-radius:16px;border:1.3px solid var(--jade);background:#fff;
+    font-size:12px;font-weight:600;color:var(--jade-dark);cursor:pointer;transition:.15s;
+  }
+  .tag-chip:hover{background:var(--jade-tint);}
+  .tag-chip.active{background:var(--jade);color:#fff;}
+  .tag-chip .cnt{opacity:.8;font-weight:500;margin-left:3px;}
+
+  .course-toolbar{display:flex;gap:8px;margin-bottom:8px;}
+  .course-toolbar .course-search{margin-bottom:0;flex:1;}
+  .add-course-btn{white-space:nowrap;color:#fff;background:var(--brand);border-color:var(--brand);font-weight:700;}
+  .add-course-btn:hover{background:var(--brand-dark);border-color:var(--brand-dark);}
+  .add-course-form{
+    border:1.5px dashed var(--brand);border-radius:8px;background:var(--brand-tint);
+    padding:12px;margin-bottom:8px;display:flex;flex-direction:column;gap:8px;
+  }
+  .add-course-hint{font-size:10.5px;color:var(--brand-dark);line-height:1.5;}
+  .add-course-actions{display:flex;justify-content:flex-end;gap:8px;}
+
+  .course-scroll-list{
+    border:1px solid var(--line);border-radius:6px;max-height:220px;overflow-y:auto;background:#fff;
+  }
+  .course-row{
+    display:flex;align-items:center;gap:9px;padding:8px 12px;font-size:12.5px;
+    border-bottom:1px solid #F0F0F0;cursor:pointer;transition:background .15s;position:relative;
+  }
+  .course-row:last-child{border-bottom:none;}
+  .course-row:hover{background:#FAFAFA;}
+  .course-row.checked{background:var(--brand-tint);}
+  .course-row input{width:14px;height:14px;accent-color:var(--brand);pointer-events:none;flex-shrink:0;}
+  .course-row .course-name{flex:1;}
+  .course-row .course-tag{
+    font-size:10px;color:var(--muted);background:#F0F0F0;padding:1px 7px;border-radius:8px;flex-shrink:0;
+  }
+  .course-row .remove-course-btn{
+    display:none;width:18px;height:18px;border-radius:50%;border:none;background:#EDEEEC;color:var(--muted);
+    font-size:11px;line-height:18px;text-align:center;cursor:pointer;flex-shrink:0;
+  }
+  .course-row:hover .remove-course-btn{display:inline-block;}
+  .course-row .remove-course-btn:hover{background:var(--brand);color:#fff;}
+  .course-empty{padding:16px;text-align:center;font-size:12px;color:var(--muted);}
+  .course-group-header{
+    font-size:10.5px;color:var(--muted);font-weight:700;background:#FAFAFA;
+    padding:6px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;
+  }
+  .selected-course-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .selected-course-chip{
+    display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:14px;
+    background:var(--brand-tint);color:var(--brand-dark);font-size:11.5px;font-weight:600;
+  }
+  .selected-course-chip .remove-x{cursor:pointer;opacity:.7;}
+  .selected-course-chip .remove-x:hover{opacity:1;}
+
+  /* 专业列表 */
+  .prof-list{
+    margin-top:10px;border:1px solid var(--line);border-radius:6px;
+    max-height:320px;overflow-y:auto;
+  }
+  .prof-group-header{
+    font-size:11px;color:var(--muted);background:#FAFAFA;padding:6px 12px;
+    font-weight:700;border-bottom:1px solid var(--line);position:sticky;top:0;
+  }
+  .prof-row{
+    display:flex;align-items:center;gap:9px;padding:8px 12px;font-size:13px;
+    border-bottom:1px solid #F0F0F0;transition:background .3s;
+  }
+  .prof-row:last-child{border-bottom:none;}
+  .prof-row.checked{background:var(--jade-tint);}
+  .prof-row input{width:15px;height:15px;accent-color:var(--jade);cursor:pointer;}
+  .prof-row .code{color:var(--muted);font-size:11.5px;}
+
+  .date-row{display:flex;gap:10px;}
+
+  .discount-mode-toggle{display:flex;gap:8px;margin-bottom:10px;}
+  .discount-mode-btn{
+    flex:1;padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:700;cursor:pointer;text-align:center;color:var(--muted);transition:.15s;
+  }
+  .discount-mode-btn.active{background:var(--brand-tint);border-color:var(--brand);color:var(--brand-dark);}
+  .date-input{
+    flex:1;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:13px;color:var(--text);
+  }
+
+  .save-btn{
+    margin-top:6px;width:100%;padding:12px;border:none;border-radius:8px;
+    background:var(--brand);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;
+  }
+  .save-btn:hover{background:var(--brand-dark);}
+  .save-note{font-size:11.5px;color:var(--muted);margin-top:8px;text-align:center;}
+
+  /* 右侧 */
+  .section-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em;margin:0 0 10px 2px;text-transform:uppercase;}
+  .ai-card{
+    background:linear-gradient(155deg,#16302C 0%, #1F4A40 100%);color:#fff;border-radius:10px;
+    padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden;
+  }
+  .ai-eyebrow{font-size:10px;letter-spacing:.12em;color:#8FD4BC;font-weight:700;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:#8FD4BC;animation:blink 1.6s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .ai-text{font-size:12.5px;line-height:1.7;}
+  .ai-text b{color:#8FD4BC;}
+  .ai-loading{font-size:12px;color:#B9C9C4;}
+
+  .log-panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px;}
+  .log-item{position:relative;padding:0 0 14px 18px;border-left:2px solid var(--line);}
+  .log-item:last-child{border-left-color:transparent;padding-bottom:0;}
+  .log-item::before{content:"";position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--jade);border:2px solid #fff;box-shadow:0 0 0 1.3px var(--jade);}
+  .log-item.warn::before{background:var(--amber);box-shadow:0 0 0 1.3px var(--amber);}
+  .log-time{font-family:"SF Mono","Menlo",monospace;font-size:10px;color:var(--muted);}
+  .log-text{font-size:12px;margin-top:3px;line-height:1.5;}
+  .log-tag{display:inline-block;margin-top:5px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--amber-tint);color:var(--amber);}
+  .log-item.new .log-text{color:var(--jade-dark);font-weight:600;}
+
+  .intro-banner{
+    background:#fff;border:1px solid var(--line);border-left:4px solid var(--brand);
+    border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:12.5px;line-height:1.75;
+  }
+  .intro-banner .row{display:flex;gap:8px;margin-bottom:4px;}
+  .intro-banner .row:last-child{margin-bottom:0;}
+  .intro-banner .label{flex-shrink:0;font-weight:800;color:var(--text);width:78px;}
+  .intro-banner .val{color:var(--muted);}
+  .intro-banner .task{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);}
+  .intro-banner .task .val{color:var(--jade-dark);font-weight:700;}
+
+  .click-compare{
+    margin-top:10px;font-size:11.5px;color:var(--muted);background:#FAFAFA;
+    border-radius:6px;padding:8px 10px;line-height:1.6;
+  }
+  .click-compare b{color:var(--jade-dark);}
+
+  /* 手风琴式业务分类展开 */
+  .cat-card{background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;overflow:hidden;}
+  .cat-header{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none;}
+  .cat-header:hover{background:#FAFAFA;}
+  .cat-checkbox{width:15px;height:15px;accent-color:var(--jade);cursor:pointer;flex-shrink:0;}
+  .cat-name{font-size:13px;font-weight:700;color:var(--text);flex-shrink:0;}
+  .cat-count{font-size:11px;color:var(--muted);}
+  .cat-progress{font-size:10.5px;color:var(--jade-dark);font-weight:600;margin-left:auto;margin-right:8px;}
+  .cat-arrow{font-size:11px;color:var(--muted);transition:transform .2s;flex-shrink:0;}
+  .cat-arrow.open{transform:rotate(180deg);}
+  .cat-body{display:none;padding:0 14px 12px 14px;border-top:1px solid var(--line);}
+  .cat-body.open{display:block;}
+
+  .cat-item-list{display:flex;flex-wrap:wrap;gap:6px;padding-top:9px;}
+  .cat-item-chip{
+    display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;
+    border:1px solid var(--line);background:#FBFBFA;font-size:11.5px;cursor:pointer;transition:.15s;
+  }
+  .cat-item-chip:hover{border-color:var(--jade);}
+  .cat-item-chip.checked{background:var(--jade-tint);border-color:var(--jade);color:var(--jade-dark);font-weight:600;}
+  .cat-item-chip input{width:12px;height:12px;accent-color:var(--jade);pointer-events:none;}
+  .cat-item-chip.mismatch{background:var(--brand-tint);border-color:var(--brand);color:var(--brand-dark);}
+  .scope-mismatch{font-size:10px;font-weight:700;color:var(--brand-dark);margin-left:4px;}
+
+  .quick-clear-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .quick-clear-row .btn-plain{font-size:11.5px;padding:6px 12px;}
+  #clearMismatchBtn{border-color:var(--brand);color:var(--brand-dark);}
+  #clearMismatchBtn:hover{background:var(--brand-tint);}
+
+  .datetime-row{display:flex;gap:8px;}
+  .datetime-row .date-input{flex:1;}
+  .time-trigger-btn{
+    width:110px;border:1px solid var(--line);border-radius:6px;padding:9px 10px;
+    font-size:13px;color:var(--text);background:#fff;cursor:pointer;font-family:"SF Mono","Menlo",monospace;
+    text-align:center;
+  }
+  .time-trigger-btn:hover{border-color:var(--brand);}
+
+  .time-picker-popover{
+    position:relative;margin-top:8px;background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:10px 8px;box-shadow:0 6px 18px rgba(0,0,0,.08);z-index:20;
+  }
+  .tp-cols{display:flex;gap:4px;position:relative;}
+  .tp-cols::before{
+    content:"";position:absolute;left:0;right:0;top:50%;height:30px;transform:translateY(-15px);
+    background:var(--brand-tint);border-radius:6px;pointer-events:none;z-index:0;
+  }
+  .tp-col{flex:1;height:150px;overflow-y:auto;scroll-snap-type:y mandatory;position:relative;z-index:1;
+    scrollbar-width:none;}
+  .tp-col::-webkit-scrollbar{display:none;}
+  .tp-col-inner{padding:60px 0;}
+  .tp-item{height:30px;line-height:30px;text-align:center;scroll-snap-align:center;
+    font-size:13px;color:var(--muted);font-family:"SF Mono","Menlo",monospace;user-select:none;}
+  .tp-item.selected{color:var(--brand-dark);font-weight:800;font-size:15px;}
+  .tp-labels{display:flex;gap:4px;margin-top:4px;}
+  .tp-labels span{flex:1;text-align:center;font-size:10px;color:var(--muted);}
+  .tp-confirm-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);}
+  .tp-confirm-btn{
+    border:none;background:var(--brand);color:#fff;font-size:12px;font-weight:700;
+    padding:7px 16px;border-radius:6px;cursor:pointer;
+  }
+  .tp-confirm-btn:hover{background:var(--brand-dark);}
+
+  .cat-sub-tag-row{display:flex;flex-wrap:wrap;gap:6px;padding-top:9px;margin-bottom:6px;}
+  .cat-sub-tag{
+    padding:5px 11px;border-radius:14px;border:1.3px solid var(--jade);background:#fff;
+    font-size:11.5px;font-weight:600;color:var(--jade-dark);cursor:pointer;transition:.15s;
+  }
+  .cat-sub-tag:hover{background:var(--jade-tint);}
+  .cat-sub-tag.active{background:var(--jade);color:#fff;}
+  .cat-sub-tag .cnt{opacity:.8;font-weight:500;margin-left:2px;}
+  .cat-sub-group-header{font-size:10.5px;color:var(--muted);font-weight:700;margin:8px 0 4px;padding-top:5px;border-top:1px dashed var(--line);}
+  .cat-sub-group-header:first-child{border-top:none;padding-top:0;}
+  .cat-new-badge{
+    font-size:10px;font-weight:700;color:var(--jade-dark);background:var(--jade-tint);
+    padding:2px 8px;border-radius:8px;margin-top:8px;display:inline-block;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="brand-header">
+    <img src="data:image/png;base64,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" alt="昭昭医考">
+    <div class="sep"></div>
+    <div class="page-name">运营后台 · 优惠券管理</div>
+  </div>
+
+  <div class="intro-banner">
+    <div class="row"><span class="label">当前痛点</span><span class="val">人工配置中级职称约39个专业的优惠券（取名、逐一点击、分配），实测耗时2-3小时；且专业数量随业务增长持续增加</span></div>
+    <div class="row"><span class="label">本次改造</span><span class="val">先从可搜索的商品列表中选定班型，再按科室分组一键批量勾选专业，一次性生成全部优惠券</span></div>
+    <div class="row"><span class="label">预期收益</span><span class="val">预计将2-3小时的操作压缩至10分钟内完成，且不同班型覆盖范围不一致时自动校验提醒，避免误操作</span></div>
+    <div class="row task"><span class="label">演示任务</span><span class="val">试试看：勾选「2027年中级职称精英班」，再展开「内科类」全选——注意"中医内科"会被标红，因为该商品不覆盖此专业</span></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-title">🎫 优惠券批量配置</div>
+    <div class="switch-wrap" style="font-size:11.5px;color:var(--jade-dark);font-weight:700;">✅ 支持跨业务大类批量选择</div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="field-row">
+        <div class="field-label"><span class="req">*</span>优惠券名称</div>
+        <input class="date-input" type="text" value="中级职称精英班暑期立减券" style="width:100%;">
+      </div>
+
+      <div class="field-row">
+        <div class="field-label"><span class="req">*</span>优惠方式</div>
+        <div class="discount-mode-toggle" id="discountModeToggle">
+          <div class="discount-mode-btn active" data-mode="threshold">满减</div>
+          <div class="discount-mode-btn" data-mode="percent">按比例折扣</div>
+          <div class="discount-mode-btn" data-mode="fixed">自定义直减</div>
+        </div>
+        <div class="date-row" id="discountInputWrap">
+          <div style="flex:1;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:13px;color:var(--muted);white-space:nowrap;">满</span>
+            <input class="date-input" type="number" value="0" id="thresholdInput">
+            <span style="font-size:13px;color:var(--muted);white-space:nowrap;">元减</span>
+            <input class="date-input" type="number" value="980" id="amountInput">
+            <span style="font-size:13px;color:var(--muted);white-space:nowrap;">元</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label"><span class="req">*</span>所属课程（班型商品）</div>
+        <div class="course-toolbar">
+          <input class="date-input course-search" type="text" id="courseSearchInput" placeholder="搜索班型商品，如「精英班」「早鸟」…">
+          <button class="btn-plain add-course-btn" id="addCourseBtn" type="button">＋ 新增商品</button>
+        </div>
+        <div class="add-course-form" id="addCourseForm" style="display:none;">
+          <input class="date-input" type="text" id="newCourseName" placeholder="商品名称，如「2027年中级职称冲刺押题班」">
+          <select class="date-input" id="newCourseGroup">
+            <option value="刷题必买">刷题必买</option>
+            <option value="高端进阶">高端进阶</option>
+            <option value="高分密训">高分密训</option>
+            <option value="基础夯实">基础夯实</option>
+          </select>
+          <div class="add-course-hint">新商品默认沿用「中级职称19个专业」覆盖范围，如需调整需技术侧另行配置。</div>
+          <div class="add-course-actions">
+            <button class="btn-plain" id="cancelAddCourse" type="button">取消</button>
+            <button class="tp-confirm-btn" id="confirmAddCourse" type="button">确定添加</button>
+          </div>
+        </div>
+        <div class="course-scroll-list" id="courseScrollList"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">商品列表支持搜索定位，可多选，鼠标悬停可移除。优惠券实际作用于「已选课程 × 已选专业」的组合。</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label"><span class="req">*</span>所属专业（点击业务大类展开）</div>
+        <div class="quick-clear-row" id="quickClearRow" style="display:none;">
+          <button class="btn-plain" id="clearMismatchBtn">✕ 清空不适用项（<span id="mismatchClearCount">0</span>）</button>
+          <button class="btn-plain" id="clearAllProfBtn">清空全部已选专业</button>
+        </div>
+        <div class="click-compare" id="clickCompare" style="display:none;"></div>
+        <div id="catList" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label"><span class="req">*</span>生效时间</div>
+        <div class="datetime-row">
+          <input class="date-input" type="date" id="startDateInput" value="2026-07-20">
+          <button class="time-trigger-btn" id="startTimeTrigger" type="button">09:00:00</button>
+        </div>
+        <div class="time-picker-popover" id="startTimePopover" style="display:none;"></div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label"><span class="req">*</span>截止时间</div>
+        <div class="datetime-row">
+          <input class="date-input" type="date" id="endDateInput" value="2026-07-31">
+          <button class="time-trigger-btn" id="endTimeTrigger" type="button">23:59:59</button>
+        </div>
+        <div class="time-picker-popover" id="endTimePopover" style="display:none;"></div>
+        <div id="dateWarning" style="display:none;font-size:11px;color:var(--brand-dark);margin-top:6px;">⚠️ 截止时间不能早于生效时间</div>
+      </div>
+
+      <button class="save-btn" id="applyBtn">保存配置</button>
+      <div class="save-note">已选 <b id="selCount">0</b> 个专业</div>
+    </div>
+
+    <div>
+      <p class="section-label">AI 变更摘要</p>
+      <div class="ai-card">
+        <div class="ai-eyebrow"><span class="dot"></span>AI 自动生成 · 最近 7 天</div>
+        <div class="ai-text" id="aiText">
+          过去 7 天内，「内科主治」优惠券金额被修改 3 次（50→80→50），波动较大，建议确认是否为误操作。其余专业配置暂无异常。
+        </div>
+      </div>
+
+      <p class="section-label">变更记录</p>
+      <div class="log-panel" id="logCard">
+        <div class="log-item warn">
+          <div class="log-time">07-13 09:12 · 运营-王倩</div>
+          <div class="log-text">修改「内科主治」优惠券金额：50 → 80</div>
+          <div class="log-tag">短时间重复修改</div>
+        </div>
+        <div class="log-item">
+          <div class="log-time">07-12 16:40 · 运营-陈昊</div>
+          <div class="log-text">新增「外科类」暑期优惠券配置，覆盖 10 个专业</div>
+        </div>
+        <div class="log-item">
+          <div class="log-time">07-11 11:03 · 运营-王倩</div>
+          <div class="log-text">修改「内科主治」优惠券金额：80 → 50</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 完整业务分类：数组=平铺列表；对象=三层结构（含科室分组，目前仅中级职称有此细分）
+const taxonomy = {
+  "临床": ["临床执业医师","临床助理医师"],
+  "西医": ["西医考研","西医考研—复试","规培结业考核（共30科）","期末考试（共4科）","申硕—西医综合","西医副高职称（共47科）","临床三基","临床医学专业／本科水平测试"],
+  "中级职称": {
+    "内科类": ["全科主治(301)","全科医学中医类(302)","内科主治(303)","心内主治(304)","呼吸主治(305)","消化主治(306)","肾内主治(307)","神内主治(308)","内分泌主治(309)","血液主治(310)","传染病主治(312)","风湿免疫主治(313)","中医内科(315)","中西医结合内科(316)"],
+    "外科类": ["普外主治(317)","骨外主治(318)","胸心外主治(319)","神外主治(320)","泌外主治(321)","小儿外主治(322)","烧伤外主治(323)","整形外主治(324)","中医外科(325)","中西医结合外科(326)"],
+    "妇儿类": ["妇产主治(330)","儿科主治(332)"],
+    "专科其他类": ["眼科学(334)","耳鼻咽喉科学(336)","皮肤与性病学(338)","精神病学(340)","肿瘤内科学(341)","核医学主治(345)","麻醉学(347)","康复医学(348)","病理学主治(351)","口腔医学(353)","重症医学(359)","公共卫生(362)","急诊医学(392)"]
+  },
+  "中医／中西医": ["中医执业／助理医师","中医考研","中西医执业／助理医师","中级职称（共10科）","规培结业考核（共2科）","规培出科考核（共9科）","期末考试（中医，共4科）","期末考试（中西医，共4科）","中医师承及确有专长","中医适宜技术"],
+  "乡村全科": ["乡村全科助理"],
+  "口腔": ["口腔执业医师","口腔执业助理医师","中级职称（共1科）","期末考试（口腔，共4科）","口腔规培结业考核（共7科）","口腔考研"],
+  "公卫预防": ["公卫执业医师","公卫助理医师","中级职称（共5科）","期末考试（公卫，共4科）","公卫考研"],
+  "护理": ["护士执业","护士资格","护理三基","初级护师","护理考研","主管护师（共6科）","专科期末（护理，共2科）","本科期末（护理，共3科）","护理专升本（统招，共4科）"],
+  "中医传承": ["中医传承"],
+  "中西药": ["考研（共2科）","初级职称（共4科）","中级职称（共2科）","期末考试（西药，共4科）","期末考试（中药，共4科）"],
+  "医学技术": ["医技初级职称（士，共7科）","医技初级职称（师，共7科）","医学初级职称（师，共1科）","医技中级职称（主管，共15科）"],
+  "医疗招聘": ["临床考编","中医考编","口腔考编","预防医学考编","护理考编","药学考编","中药学考编","检验考编","康复考编","影像考编"],
+  "过敏": ["变态反应学"]
+};
+
+const catList = document.getElementById('catList');
+const courseScrollList = document.getElementById('courseScrollList');
+const courseSearchInput = document.getElementById('courseSearchInput');
+let checkedSet = new Set(); // key格式："分类::专业"，避免跨分类同名冲突（如多个分类都有"中级职称（共X科）"）
+let checkedCourses = new Set();
+let tagClickCount = 0;
+let manualClickCount = 0;
+const openCats = new Set(["中级职称"]); // 默认展开中级职称，方便演示
+
+// 优惠方式：满减 / 按比例折扣 / 自定义直减（无门槛）
+let discountMode = 'threshold';
+const discountInputWrap = document.getElementById('discountInputWrap');
+document.querySelectorAll('.discount-mode-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.discount-mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    discountMode = btn.dataset.mode;
+    if(discountMode === 'threshold'){
+      discountInputWrap.innerHTML = `
+        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">满</span>
+          <input class="date-input" type="number" value="0" id="thresholdInput">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">元减</span>
+          <input class="date-input" type="number" value="980" id="amountInput">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">元</span>
+        </div>`;
+    } else if(discountMode === 'percent'){
+      discountInputWrap.innerHTML = `
+        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">打</span>
+          <input class="date-input" type="number" value="8" step="0.1" id="percentInput">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">折（即优惠 <span id="percentOffHint">20</span>%）</span>
+        </div>`;
+      const pInput = document.getElementById('percentInput');
+      pInput.addEventListener('input', ()=>{
+        const off = Math.max(0, Math.round((10 - Number(pInput.value || 0)) * 10) / 10);
+        document.getElementById('percentOffHint').textContent = off;
+        updateLivePreview();
+      });
+    } else {
+      discountInputWrap.innerHTML = `
+        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">无门槛直减</span>
+          <input class="date-input" type="number" value="980" id="fixedAmountInput">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">元</span>
+        </div>`;
+    }
+    bindDiscountInputListeners();
+    updateLivePreview();
+  });
+});
+function bindDiscountInputListeners(){
+  ['thresholdInput','amountInput','fixedAmountInput'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updateLivePreview);
+  });
+}
+bindDiscountInputListeners();
+
+function getDiscountDesc(){
+  if(discountMode === 'threshold'){
+    const threshold = document.getElementById('thresholdInput').value;
+    const amount = document.getElementById('amountInput').value;
+    return `满${threshold}减${amount}`;
+  } else if(discountMode === 'percent'){
+    const pct = document.getElementById('percentInput').value;
+    return `${pct}折`;
+  } else {
+    const amt = document.getElementById('fixedAmountInput').value;
+    return `无门槛直减${amt}元`;
+  }
+}
+
+// 课程商品目录：按"刷题必买/高端进阶/高分密训/基础夯实"分类，均为中级职称真实班型
+// scope = 该商品实际覆盖的专业范围（与taxonomy中"内科类/外科类"条目字符串完全一致，用于范围校验）
+const zzzcScope = [
+  "全科主治(301)","内科主治(303)","心内主治(304)","呼吸主治(305)","消化主治(306)","肾内主治(307)",
+  "神内主治(308)","内分泌主治(309)","血液主治(310)","传染病主治(312)","风湿免疫主治(313)",
+  "普外主治(317)","骨外主治(318)","胸心外主治(319)","神外主治(320)","泌外主治(321)",
+  "小儿外主治(322)","烧伤外主治(323)","整形外主治(324)"
+]; // 共19个，注意：不含"中医内科/中西医结合内科/中医外科/中西医结合外科"等中医系专业
+
+const courseCatalogGrouped = {
+  "刷题必买": [
+    {name:"2027中级职称AI错题再练", scope: zzzcScope},
+  ],
+  "高端进阶": [
+    {name:"2027年中级职称旗舰领航班", scope: zzzcScope},
+    {name:"2027年中级职称精英班", scope: zzzcScope},
+    {name:"2027年中级职称旗舰班", scope: zzzcScope},
+    {name:"2027年中级职称至尊班", scope: zzzcScope},
+  ],
+  "高分密训": [
+    {name:"2027年中级职称高分密训班（一单元）", scope: zzzcScope},
+    {name:"2027年中级职称高分密训班（一+二单元）", scope: zzzcScope},
+  ],
+  "基础夯实": [
+    {name:"2027年中级职称基础夯实班（一单元）", scope: zzzcScope},
+    {name:"2027年中级职称基础夯实班（一+二单元）", scope: zzzcScope},
+  ]
+};
+// 拍平成查询表：商品名 -> scope，方便按名字取用
+const courseScopeMap = {};
+Object.values(courseCatalogGrouped).flat().forEach(c=> courseScopeMap[c.name] = c.scope);
+
+function renderCourseList(filterText){
+  courseScrollList.innerHTML = '';
+  const kw = (filterText || '').trim();
+  let anyVisible = false;
+  Object.entries(courseCatalogGrouped).forEach(([groupName, courses])=>{
+    const filtered = courses.filter(c => !kw || c.name.includes(kw));
+    if(filtered.length === 0) return;
+    anyVisible = true;
+    const header = document.createElement('div');
+    header.className = 'course-group-header';
+    header.textContent = `${groupName}（${courses.length}）`;
+    courseScrollList.appendChild(header);
+    filtered.forEach(course=>{
+      const row = document.createElement('div');
+      row.className = 'course-row' + (checkedCourses.has(course.name) ? ' checked' : '');
+      row.innerHTML = `<input type="checkbox" ${checkedCourses.has(course.name) ? 'checked' : ''}><span class="course-name">${course.name}</span><span class="course-tag">覆盖${course.scope.length}个专业</span><button class="remove-course-btn" title="移除该商品">✕</button>`;
+      row.addEventListener('click', ()=> toggleCourseCheck(course.name));
+      row.querySelector('.remove-course-btn').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        removeCourse(groupName, course.name);
+      });
+      courseScrollList.appendChild(row);
+    });
+  });
+  if(!anyVisible){
+    courseScrollList.innerHTML = `<div class="course-empty">没有找到匹配的商品，换个关键词试试</div>`;
+  }
+}
+function toggleCourseCheck(name){
+  if(checkedCourses.has(name)) checkedCourses.delete(name);
+  else checkedCourses.add(name);
+  renderCourseList(courseSearchInput.value);
+  renderCatList();
+  updateCount();
+  updateLivePreview();
+}
+function removeCourse(groupName, name){
+  const confirmed = window.confirm(`确认从商品列表中移除「${name}」？\n\n此操作仅影响本次演示的商品清单，不会影响真实后台数据。`);
+  if(!confirmed) return;
+  const list = courseCatalogGrouped[groupName];
+  const idx = list.findIndex(c=> c.name === name);
+  if(idx > -1) list.splice(idx, 1);
+  delete courseScopeMap[name];
+  checkedCourses.delete(name);
+  renderCourseList(courseSearchInput.value);
+  renderCatList();
+  updateCount();
+  updateLivePreview();
+}
+courseSearchInput.addEventListener('input', ()=> renderCourseList(courseSearchInput.value));
+checkedCourses.add("2027年中级职称精英班");
+renderCourseList('');
+
+// 新增商品
+const addCourseBtn = document.getElementById('addCourseBtn');
+const addCourseForm = document.getElementById('addCourseForm');
+addCourseBtn.addEventListener('click', ()=>{
+  addCourseForm.style.display = addCourseForm.style.display === 'none' ? 'flex' : 'none';
+  if(addCourseForm.style.display === 'flex') document.getElementById('newCourseName').focus();
+});
+document.getElementById('cancelAddCourse').addEventListener('click', ()=>{
+  addCourseForm.style.display = 'none';
+  document.getElementById('newCourseName').value = '';
+});
+document.getElementById('confirmAddCourse').addEventListener('click', ()=>{
+  const name = document.getElementById('newCourseName').value.trim();
+  const group = document.getElementById('newCourseGroup').value;
+  if(!name){ alert('请填写商品名称'); return; }
+  const exists = Object.values(courseCatalogGrouped).flat().some(c=> c.name === name);
+  if(exists){ alert('该商品名称已存在，请换一个名称'); return; }
+  courseCatalogGrouped[group].push({name, scope: zzzcScope});
+  courseScopeMap[name] = zzzcScope;
+  document.getElementById('newCourseName').value = '';
+  addCourseForm.style.display = 'none';
+  renderCourseList(courseSearchInput.value);
+});
+
+// 标记近7天内被频繁调整过的专业（用于AI异常提醒），仅演示"中级职称::内科主治(303)"这一条
+const recentlyAdjusted = new Set(["中级职称::内科主治(303)"]);
+
+function isNestedCat(name){ return !Array.isArray(taxonomy[name]); }
+
+function catTotal(name){
+  const val = taxonomy[name];
+  return isNestedCat(name) ? Object.values(val).flat().length : val.length;
+}
+function catSelectedCount(name){
+  let n = 0;
+  checkedSet.forEach(id=>{ if(id.startsWith(name + '::')) n++; });
+  return n;
+}
+
+function renderCatList(){
+  catList.innerHTML = '';
+  Object.entries(taxonomy).forEach(([catName, val])=>{
+    const total = catTotal(catName);
+    const selected = catSelectedCount(catName);
+    const isOpen = openCats.has(catName);
+    const allChecked = selected === total && total > 0;
+
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+
+    const header = document.createElement('div');
+    header.className = 'cat-header';
+    header.innerHTML = `
+      <input type="checkbox" class="cat-checkbox" ${allChecked ? 'checked' : ''}>
+      <span class="cat-name">${catName}</span>
+      <span class="cat-count">(${total}个)</span>
+      <span class="cat-progress">${selected > 0 ? `已选 ${selected}` : ''}</span>
+      <span class="cat-arrow ${isOpen ? 'open' : ''}">⌄</span>
+    `;
+    header.querySelector('.cat-checkbox').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      toggleCatAll(catName, !allChecked);
+    });
+    header.addEventListener('click', ()=>{
+      if(openCats.has(catName)) openCats.delete(catName); else openCats.add(catName);
+      renderCatList();
+    });
+    card.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = `cat-body ${isOpen ? 'open' : ''}`;
+
+    if(isNestedCat(catName)){
+      const badge = document.createElement('div');
+      badge.className = 'cat-new-badge';
+      badge.textContent = `🆕 支持按科室分组批量勾选（共${total}个专业）`;
+      body.appendChild(badge);
+
+      const tagRow = document.createElement('div');
+      tagRow.className = 'cat-sub-tag-row';
+      Object.entries(val).forEach(([subGroup, items])=>{
+        const allChecked = items.every(item=> checkedSet.has(`${catName}::${item}`));
+        const tag = document.createElement('div');
+        tag.className = 'cat-sub-tag' + (allChecked ? ' active' : '');
+        tag.innerHTML = `${subGroup}<span class="cnt">(${items.length})</span>`;
+        tag.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          const nowActive = !allChecked; // 已全选则本次点击=取消全选，否则=全选
+          tagClickCount++;
+          items.forEach((item,i)=>{
+            setTimeout(()=> toggleItem(catName, item, nowActive), i*30);
+          });
+        });
+        tagRow.appendChild(tag);
+      });
+      body.appendChild(tagRow);
+
+      Object.entries(val).forEach(([subGroup, items])=>{
+        const subHeader = document.createElement('div');
+        subHeader.className = 'cat-sub-group-header';
+        subHeader.textContent = subGroup;
+        body.appendChild(subHeader);
+        const list = document.createElement('div');
+        list.className = 'cat-item-list';
+        items.forEach(item=> list.appendChild(buildItemChip(catName, item)));
+        body.appendChild(list);
+      });
+    } else {
+      const list = document.createElement('div');
+      list.className = 'cat-item-list';
+      val.forEach(item=> list.appendChild(buildItemChip(catName, item)));
+      body.appendChild(list);
+    }
+
+    card.appendChild(body);
+    catList.appendChild(card);
+  });
+
+  updateCount();
+}
+
+function isProfessionCovered(itemName){
+  if(checkedCourses.size === 0) return true; // 还没选课程时不做判断，避免误导
+  for(const courseName of checkedCourses){
+    const scope = courseScopeMap[courseName];
+    if(!scope || scope.includes(itemName)) return true; // 无范围限制的课程，或在范围内
+  }
+  return false;
+}
+
+function buildItemChip(catName, item){
+  const id = `${catName}::${item}`;
+  const isChecked = checkedSet.has(id);
+  const covered = isProfessionCovered(item);
+  const mismatchMark = (isChecked && !covered) ? ' <span class="scope-mismatch">✕ 所选商品不覆盖该专业</span>' : '';
+  const chip = document.createElement('div');
+  chip.className = 'cat-item-chip' + (isChecked ? ' checked' : '') + (isChecked && !covered ? ' mismatch' : '');
+  chip.innerHTML = `<input type="checkbox" ${isChecked ? 'checked' : ''}><span>${item}${mismatchMark}</span>`;
+  chip.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    manualClickCount++;
+    toggleItem(catName, item, !checkedSet.has(id));
+  });
+  return chip;
+}
+
+function toggleItem(catName, item, on){
+  const id = `${catName}::${item}`;
+  if(on) checkedSet.add(id); else checkedSet.delete(id);
+  renderCatList();
+  updateLivePreview();
+}
+
+function toggleCatAll(catName, on){
+  const val = taxonomy[catName];
+  const items = isNestedCat(catName) ? Object.values(val).flat() : val;
+  tagClickCount++;
+  items.forEach(item=>{
+    const id = `${catName}::${item}`;
+    if(on) checkedSet.add(id); else checkedSet.delete(id);
+  });
+  renderCatList();
+  updateLivePreview();
+}
+
+function computeValidCombos(){
+  // 计算真正能生成的"专业×课程"组合数，并找出被选中但不在任何已选课程覆盖范围内的专业
+  let total = 0;
+  const mismatched = [];
+  checkedSet.forEach(id=>{
+    const item = id.split('::')[1];
+    let coveredByCount = 0;
+    checkedCourses.forEach(courseName=>{
+      const scope = courseScopeMap[courseName];
+      if(!scope || scope.includes(item)) coveredByCount++;
+    });
+    if(coveredByCount === 0 && checkedCourses.size > 0){
+      mismatched.push(item);
+    }
+    total += coveredByCount;
+  });
+  return {total, mismatched};
+}
+
+function updateCount(){
+  const n = checkedSet.size;
+  document.getElementById('selCount').textContent = n;
+
+  const compareBox = document.getElementById('clickCompare');
+  const totalClicks = tagClickCount + manualClickCount;
+  if(n > 0 && totalClicks > 0){
+    const saved = Math.max(n - totalClicks, 0);
+    compareBox.style.display = 'block';
+    compareBox.innerHTML = `改造前（逐个勾选）：需点击 <b>${n}</b> 次　→　改造后（本次实际点击）：<b>${totalClicks}</b> 次　→　减少 <b>${saved}</b> 次重复操作`;
+  } else {
+    compareBox.style.display = 'none';
+  }
+
+  const quickClearRow = document.getElementById('quickClearRow');
+  if(n > 0){
+    quickClearRow.style.display = 'flex';
+    let mismatchCount = 0;
+    checkedSet.forEach(id=>{
+      const item = id.split('::')[1];
+      if(!isProfessionCovered(item)) mismatchCount++;
+    });
+    document.getElementById('mismatchClearCount').textContent = mismatchCount;
+    document.getElementById('clearMismatchBtn').style.display = mismatchCount > 0 ? 'inline-block' : 'none';
+  } else {
+    quickClearRow.style.display = 'none';
+  }
+}
+
+function updateLivePreview(){
+  const n = checkedSet.size;
+  const c = checkedCourses.size;
+  const aiText = document.getElementById('aiText');
+  if(n === 0 || c === 0){
+    aiText.innerHTML = `请选择专业、适用课程和优惠方式，这里会实时预览本次配置的覆盖范围。`;
+    return;
+  }
+  const discountDesc = getDiscountDesc();
+  let flaggedCount = 0;
+  checkedSet.forEach(id=>{ if(recentlyAdjusted.has(id)) flaggedCount++; });
+  const flagText = flaggedCount > 0
+    ? `其中 <b>${flaggedCount}</b> 个专业的优惠券近 7 天内曾被频繁修改，建议留意是否重复操作。`
+    : '';
+  let catsInvolved = new Set();
+  checkedSet.forEach(id=> catsInvolved.add(id.split('::')[0]));
+  const {total, mismatched} = computeValidCombos();
+  const mismatchText = mismatched.length > 0
+    ? `<br>⚠️ 其中 <b>${mismatched.length}</b> 个专业（${mismatched.join('、')}）不在已选商品的覆盖范围内，不会生成优惠券。`
+    : '';
+  aiText.innerHTML = `已选择 <b>${n}</b> 个专业（跨 ${catsInvolved.size} 个业务大类：${[...catsInvolved].join('、')}） × <b>${c}</b> 个课程，实际将生成 <b>${total}</b> 张「${discountDesc}」优惠券。${flagText}${mismatchText}`;
+}
+
+// ===== 24小时制时分秒滚动选择器 =====
+const timeState = {
+  start: {h:9, m:0, s:0},
+  end: {h:23, m:59, s:59}
+};
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function buildTimePicker(key){
+  const state = timeState[key];
+  const popover = document.getElementById(`${key}TimePopover`);
+  popover.innerHTML = `
+    <div class="tp-cols">
+      <div class="tp-col" data-unit="h"><div class="tp-col-inner"></div></div>
+      <div class="tp-col" data-unit="m"><div class="tp-col-inner"></div></div>
+      <div class="tp-col" data-unit="s"><div class="tp-col-inner"></div></div>
+    </div>
+    <div class="tp-labels"><span>时</span><span>分</span><span>秒</span></div>
+    <div class="tp-confirm-row"><button class="tp-confirm-btn" data-key="${key}">确定</button></div>
+  `;
+  const unitConfig = { h: {max:23, val: state.h}, m: {max:59, val: state.m}, s: {max:59, val: state.s} };
+  Object.entries(unitConfig).forEach(([unit, cfg])=>{
+    const col = popover.querySelector(`.tp-col[data-unit="${unit}"] .tp-col-inner`);
+    for(let i=0;i<=cfg.max;i++){
+      const item = document.createElement('div');
+      item.className = 'tp-item' + (i===cfg.val ? ' selected' : '');
+      item.textContent = pad2(i);
+      item.dataset.val = i;
+      col.appendChild(item);
+    }
+    const colEl = popover.querySelector(`.tp-col[data-unit="${unit}"]`);
+    // 初始滚动定位到当前选中项
+    requestAnimationFrame(()=>{
+      const target = col.children[cfg.val];
+      if(target) colEl.scrollTop = target.offsetTop - colEl.clientHeight/2 + target.clientHeight/2;
+    });
+    let scrollTimer = null;
+    colEl.addEventListener('scroll', ()=>{
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(()=>{
+        const center = colEl.scrollTop + colEl.clientHeight/2;
+        let closest = null, closestDist = Infinity;
+        [...col.children].forEach(item=>{
+          const itemCenter = item.offsetTop + item.clientHeight/2;
+          const dist = Math.abs(itemCenter - center);
+          if(dist < closestDist){ closestDist = dist; closest = item; }
+        });
+        if(closest){
+          [...col.children].forEach(c=>c.classList.remove('selected'));
+          closest.classList.add('selected');
+          timeState[key][unit] = Number(closest.dataset.val);
+        }
+      }, 120);
+    });
+  });
+
+  popover.querySelector('.tp-confirm-btn').addEventListener('click', ()=>{
+    const s = timeState[key];
+    document.getElementById(`${key}TimeTrigger`).textContent = `${pad2(s.h)}:${pad2(s.m)}:${pad2(s.s)}`;
+    popover.style.display = 'none';
+    validateDateRange();
+  });
+}
+
+['start','end'].forEach(key=>{
+  document.getElementById(`${key}TimeTrigger`).addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const popover = document.getElementById(`${key}TimePopover`);
+    const isOpen = popover.style.display !== 'none';
+    document.querySelectorAll('.time-picker-popover').forEach(p=> p.style.display = 'none');
+    if(!isOpen){
+      buildTimePicker(key);
+      popover.style.display = 'block';
+    }
+  });
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.time-picker-popover') && !e.target.classList.contains('time-trigger-btn')){
+    document.querySelectorAll('.time-picker-popover').forEach(p=> p.style.display = 'none');
+  }
+});
+
+function getFullDateTime(key){
+  const dateVal = document.getElementById(`${key}DateInput`).value;
+  const s = timeState[key];
+  return dateVal ? `${dateVal}T${pad2(s.h)}:${pad2(s.m)}:${pad2(s.s)}` : '';
+}
+
+function validateDateRange(){
+  const startDT = getFullDateTime('start');
+  const endDT = getFullDateTime('end');
+  const warning = document.getElementById('dateWarning');
+  if(startDT && endDT && new Date(endDT) < new Date(startDT)){
+    warning.style.display = 'block';
+  } else {
+    warning.style.display = 'none';
+  }
+}
+document.getElementById('startDateInput').addEventListener('change', validateDateRange);
+document.getElementById('endDateInput').addEventListener('change', validateDateRange);
+
+document.getElementById('applyBtn').addEventListener('click', ()=>{
+  const n = checkedSet.size;
+  const c = checkedCourses.size;
+  const discountDesc = getDiscountDesc();
+  const startDateVal = document.getElementById('startDateInput').value;
+  const endDateVal = document.getElementById('endDateInput').value;
+  const startDT = getFullDateTime('start');
+  const endDT = getFullDateTime('end');
+  if(!startDateVal || !endDateVal){ alert('请填写生效时间和截止时间'); return; }
+  if(new Date(endDT) < new Date(startDT)){
+    document.getElementById('dateWarning').style.display = 'block';
+    alert('截止时间不能早于生效时间，请检查日期');
+    return;
+  }
+  document.getElementById('dateWarning').style.display = 'none';
+  if(n === 0){ alert('请先勾选至少一个专业'); return; }
+  if(c === 0){ alert('请先勾选至少一个适用课程'); return; }
+  const {total, mismatched} = computeValidCombos();
+  if(total === 0){ alert('已选专业均不在所选商品的覆盖范围内，无法生成优惠券'); return; }
+  const courseText = [...checkedCourses].join('、');
+  let catsInvolved = new Set();
+  checkedSet.forEach(id=> catsInvolved.add(id.split('::')[0]));
+  const catsText = [...catsInvolved].join('、');
+  const mismatchLine = mismatched.length > 0 ? `\n⚠️ 以下 ${mismatched.length} 个专业不在覆盖范围内，将被跳过：${mismatched.join('、')}` : '';
+  const startText = startDT.replace('T',' ');
+  const endText = endDT.replace('T',' ');
+
+  const confirmed = window.confirm(`确认批量配置优惠券？\n\n涉及业务大类：${catsText}\n优惠方式：${discountDesc}\n适用课程：${courseText}（${c} 个）\n有效期：${startText} 至 ${endText}\n实际将生成优惠券：${total} 张${mismatchLine}\n\n请确认无误。`);
+  if(!confirmed) return;
+
+  const logCard = document.getElementById('logCard');
+  const item = document.createElement('div');
+  item.className = 'log-item new';
+  // 固定为demo虚构的"当前时间"，与历史记录保持一致，不用浏览器真实时钟
+  const t = `07-16 09:32`;
+  item.innerHTML = `
+    <div class="log-time">${t} · 运营-我</div>
+    <div class="log-text">批量配置优惠券（${discountDesc}，有效期 ${startText} 至 ${endText}），涉及「${catsText}」，适用课程：${courseText}，共生成 ${total} 张${mismatched.length > 0 ? `（${mismatched.length}个专业因不在覆盖范围内被跳过）` : ''}</div>
+  `;
+  logCard.insertBefore(item, logCard.firstChild);
+
+  const aiText = document.getElementById('aiText');
+  aiText.innerHTML = `<span class="ai-loading">正在生成摘要…</span>`;
+  setTimeout(()=>{
+    aiText.innerHTML = `刚刚，<b>你</b> 一次性批量配置了「${catsText}」的优惠券（${discountDesc}，有效期 ${startText} 至 ${endText}），适用课程：${courseText}，共生成 <b>${total}</b> 张，相比逐个专业逐个课程手动勾选，节省大量重复操作。此外，「内科主治」优惠券近 7 天内被修改 3 次，金额来回波动，建议核实是否为误操作。`;
+  }, 600);
+});
+
+document.getElementById('clearMismatchBtn').addEventListener('click', ()=>{
+  const toRemove = [];
+  checkedSet.forEach(id=>{
+    const item = id.split('::')[1];
+    if(!isProfessionCovered(item)) toRemove.push(id);
+  });
+  toRemove.forEach(id=> checkedSet.delete(id));
+  renderCatList();
+  updateLivePreview();
+});
+
+document.getElementById('clearAllProfBtn').addEventListener('click', ()=>{
+  checkedSet.clear();
+  tagClickCount = 0;
+  manualClickCount = 0;
+  renderCatList();
+  updateLivePreview();
+});
+
+renderCatList();
+updateLivePreview();
+</script>
+<script src="总版外壳.js"></script></body>
+</html>

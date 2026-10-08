@@ -1,11 +1,5 @@
-node_modules/
-.pnpm-store/
-dist/
-*.zip
-.DS_Store
+node_modules
+.next
+dist
 .env
-.env.*
-*.log
-.impeccable/
-交付包_Vue2_ElementUI/node_modules/
-运营配置助手_二期总交付包_2026-09-04/
+.DS_Store

@@ -2,7 +2,11 @@
   <section class="operation-page">
     <header class="page-head">
       <div>
-        <div class="breadcrumb"><span>商品与营销</span><i class="el-icon-arrow-right" />{{ title }}</div>
+        <div class="breadcrumb">
+          <span>商品与营销</span>
+          <template v-if="mode === 'shelf'"><i class="el-icon-arrow-right" />商品管理</template>
+          <i class="el-icon-arrow-right" />{{ title }}
+        </div>
         <h1 class="page-title">{{ title }}</h1>
         <p class="page-description">{{ description }}</p>
       </div>
@@ -43,13 +47,7 @@
               <span v-if="priceMode === 'REDUCE'">每个组合减免</span>
               <span v-else-if="priceMode === 'PERCENT'">当前价格下调</span>
               <span v-else>统一设置为</span>
-              <el-input-number
-                v-model="priceValue"
-                :min="priceMode === 'PERCENT' ? 1 : 0"
-                :max="priceMode === 'PERCENT' ? 99 : 99999"
-                :precision="priceMode === 'PERCENT' ? 0 : 2"
-                controls-position="right"
-              />
+              <el-input v-model.trim="priceDraft" class="price-input" placeholder="一次填好数字" />
               <span>{{ priceMode === 'PERCENT' ? '%' : '元' }}</span>
             </div>
           </template>
@@ -138,7 +136,7 @@ export default {
       transfer,
       shelfAction: 'OFF',
       priceMode: 'REDUCE',
-      priceValue: 980,
+      priceDraft: '980',
       selectedProductIds: Array.isArray(transfer.products) ? transfer.products : [],
       professionIds: Array.isArray(transfer.professions) ? transfer.professions : [],
       productCache: allOperationProducts.map(item => ({ ...item })),
@@ -158,11 +156,15 @@ export default {
     }
   },
   computed: {
-    title () { return this.mode === 'shelf' ? '商品课程上下架' : '商品批量调价' },
+    title () { return this.mode === 'shelf' ? '课程上下架' : '商品批量调价' },
     description () {
       return this.mode === 'shelf'
         ? '规则和班型填一次，专业按科室一键勾选，并填写生效与截止时间，按实际覆盖组合批量上架或下架。'
-        : '规则和班型填一次，专业按科室一键勾选，按实际覆盖组合统一调价。'
+        : '价格是事实：数字一次填好，确认调价才写入。接入后台后学员立刻看见，不要用加减连点。'
+    },
+    priceValue () {
+      const next = Number(this.priceDraft)
+      return Number.isFinite(next) ? next : 0
     },
     selectedProductObjects () { return this.productCache.filter(item => this.selectedProductIds.includes(item.id)) },
     impact () { return getImpact(this.selectedProductIds, this.professionIds, this.productCache) },
@@ -212,7 +214,7 @@ export default {
       this.professionIds = this.professionIds.filter(item => !ids.includes(item))
     },
     submit () {
-      if (this.mode === 'price' && this.priceValue <= 0) return this.$message.warning('请填写大于 0 的调价数值')
+      if (this.mode === 'price' && (!this.priceDraft || this.priceValue <= 0)) return this.$message.warning('请一次填好大于 0 的调价数字')
       if (!this.selectedProductIds.length) return this.$message.warning('请先选择至少一个班型商品')
       if (!this.professionIds.length) return this.$message.warning('请先勾选至少一个专业')
       if (!this.impact.combinationCount) return this.$message.error('已选专业均不在商品覆盖范围内，请调整后再保存')
@@ -269,6 +271,7 @@ export default {
 .choice-grid strong{font-size:15px}
 .choice-grid small{margin-top:5px;color:#667085;white-space:normal}
 .number-setting{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding:14px 16px;background:#f7f8fa;border-radius:8px}
+.price-input{width:160px}
 .config-panel ::v-deep .product-list{max-height:240px}
 .config-panel ::v-deep .category-list{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px}
 .time-fields{display:grid;gap:10px}
