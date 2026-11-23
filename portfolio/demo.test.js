@@ -141,6 +141,64 @@ test('empty fields, percent at least 100, and no overlap block', () => {
   assert.equal(none.canConfirm, false);
 });
 
+test('shelf blocks an inverted window and skips an uncovered subject', () => {
+  const { reviewShelf } = require('./demo.js');
+  const bad = reviewShelf(Object.assign(baseInput(), {
+    action: 'off',
+    start: '2026-04-30T18:00',
+    end: '2026-04-01T09:00',
+    comboShelf: {}
+  }));
+  assert.ok(codes(bad.blocks).includes('bad-range'));
+  assert.equal(bad.canConfirm, false);
+
+  const mismatch = reviewShelf(Object.assign(baseInput(), {
+    selectedProductIds: ['write-sys'],
+    selectedSubjectIds: ['writing', 'speaking'],
+    action: 'off',
+    start: '2026-04-01T09:00',
+    end: '2026-04-30T18:00',
+    comboShelf: {}
+  }));
+  assert.equal(mismatch.changing.length, 1);
+  assert.equal(mismatch.mismatched[0].name, '口语');
+  assert.equal(mismatch.canConfirm, true);
+});
+
+test('coupon blocks a reduction that meets the threshold', () => {
+  const { reviewCoupon } = require('./demo.js');
+  const over = reviewCoupon(Object.assign(baseInput(), {
+    kind: 'threshold',
+    threshold: '100',
+    amount: '100',
+    start: '2026-04-01T00:00',
+    end: '2026-04-30T00:00'
+  }));
+  assert.ok(codes(over.blocks).includes('amount-too-high'));
+  assert.equal(over.canConfirm, false);
+});
+
+test('ads block a repeated sort and a non-https link', () => {
+  const { reviewAd, reviewEntry } = require('./demo.js');
+  const existing = [{ id: 'a1', placement: '开屏', lineId: 'general', sort: 1, status: 'on', start: '2026-03-01T00:00', end: '2026-04-30T23:59' }];
+  const clash = reviewAd({
+    id: '', name: '另一张', placement: '开屏', lineId: 'general', destType: 'page', dest: '课程列表',
+    start: '2026-04-01T00:00', end: '2026-04-20T00:00', sort: '1', status: 'on'
+  }, existing);
+  assert.ok(codes(clash.blocks).includes('sort-clash'));
+
+  const link = reviewAd({
+    id: '', name: '临时', placement: '弹层', lineId: 'career', destType: 'link', dest: 'http://example.com/sale',
+    start: '2026-06-01T00:00', end: '2026-06-20T00:00', sort: '1', status: 'on'
+  }, []);
+  assert.ok(codes(link.blocks).includes('bad-link'));
+
+  const mini = reviewEntry({ id: '', name: '练习', env: 'mini', appId: 'wx-sample', path: '', status: 'on' }, []);
+  assert.ok(codes(mini.blocks).includes('empty-mini'));
+  const https = reviewEntry({ id: '', name: '开放日', env: 'web', target: 'https://example.com/open-day', status: 'on' }, []);
+  assert.equal(https.canSave, true);
+});
+
 test('a higher flat price warns, a flat zero blocks', () => {
   const raised = analyze(baseInput({ adjustment: { mode: 'fixed', value: 300 } }));
   assert.ok(codes(raised.warnings).includes('price-increase'));
